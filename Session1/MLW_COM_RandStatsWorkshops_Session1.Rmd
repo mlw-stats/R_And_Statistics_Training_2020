@@ -1,0 +1,1527 @@
+---
+title: "Statistics and R short course"
+author: "Marc Henrion"
+date: "30 November 2020"
+output:
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE, fig.width=16, fig.height=9, dpi=150, highlight=T, size = "tiny")
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+```
+
+# Session 1: Introduction to R
+
+## Preliminaries
+
+* Certificates of attendance
+  + You need to attend the first 7 sessions.
+  + Sign in & check spelling of name on the sign-in sheet!
+  + Only issued if paid-up and in exchange for completed feedback form.
+
+$$\,$$ 
+
+* Participant packs (copy of slides, R code etc.)
+  + [https://github.com/mlw-stats/R_And_Statistics_Training_2020](https://github.com/mlw-stats/R_And_Statistics_Training_2020)
+  
+$$\,$$ 
+  
+* Housekeeping
+  + Covid-19 measures
+  + Refreshments
+  + Fire exits
+  + Bathrooms
+  + RStudio Cloud
+  
+  
+
+## Learning outcomes
+
+1. **KNOW R**: Explain know what R is & what it can do. 
+2. **KNOW R RESOURCES**: List useful R resources and access them. 
+3. **DO R**: Perform basic operations relevant for your research in R:
+    a. Read data into R & write data or results to the harddrive.
+    b. Manipulate & use different object types.
+    c. Write & use functions in R
+    d. Perform basic analyses on a dataset: mean, standard deviation, linear regression.
+    e. Produce various standard graphs and tables
+4. **UNDERSTAND BASICS OF STATISTICS**: Explain basic statistical theory: common distributions, standard statistical techniques, common study designs.
+5. **UNDERSTAND STUDY DESIGNS**: Recommend appropriate designs & analyses.
+6. **COMPREHEND OPEN SCIENCE**: Summarise principles of open, reproducible research.
+7. **DO OPEN SCIENCE WITH R**: Prepare R scripts, markdown documents, packages & use GitHub.
+
+
+## What you will not achieve in this workshop
+
+$$\,$$
+
+* You will **not** be proficient in R by the end of the week.
+
+$$\,$$
+
+* You will **not** be proficient in statistics. We cover only some of the basics .
+
+$$\,$$
+
+**Workshop materials are meant as a resource / reference.**
+
+It is up to **you** to then **develop yourself further** after the workshop.
+
+
+# Installing R
+
+## Installing R
+
+$$\,$$
+
+* Visit:
+  + [https://cran.r-project.org/](https://cran.r-project.org/)
+  + [https://www.rstudio.com/products/rstudio/download/](https://www.rstudio.com/products/rstudio/download/) [recommended but optional]
+	  (choose RStudio Desktop)
+	  
+$$\,$$
+
+* Download version for your operating system
+
+$$\,$$
+
+* Follow instructions
+
+
+# What is R?
+
+
+## What is R?
+
+$$\,$$
+
+* A programming language / software environment for statistical computing.
+
+$$\,$$
+
+* Developed by **R**obert Gentleman and **R**oss Ihaka in New Zealand.
+
+$$\,$$
+
+* First released August 1993 (26 years old).
+
+$$\,$$
+
+
+## What is R?
+
+:::::: {.columns}
+::: {.column width="50%"}
+![Thieme, N., R Generation, Significance, 15 (4), 2018](images/gentleman.png)
+:::
+
+::: {.column width="50%"}
+![Thieme, N., R Generation, Significance, 15 (4), 2018](images/ihaka.png)
+:::
+::::::
+
+## What is R?
+
+* R is a multi-paradigm language:
+  + Array [scalars generalized to vectors, matrices, higher-dimensional arrays]
+  + Interpreted [no compiling]
+  + Functional, impure [programming = evaluation of math functions; tell the machine what to do, not how]
+  + Interactive mode [enter statements one at a time, see evaluation immediately]
+  + List-based [has lists as a data structure]
+  + Object-oriented prototype-based [classes and methods, no distinction between class and instance]
+  + Scripting [same as interpreted; passes operations to external programs]
+
+* R is based on two older languages: S and Scheme
+
+* The name R = a nod to S and the first names of Gentleman & Ihaka
+
+* Core of R written mostly in C, Fortran and R itself
+
+
+## What is R?
+
+* Free, open source software
+
+* User could submit bug reports; frequent reporters were given permission to edit R itself
+  + This became the R Core Team: Gentleman, Ihaka, Mächler, Dalgaard, Hornik, Leisch, Lumley, ...
+
+* The Comprehensive R Archive Network (CRAN) was created to make all essential documentation and files available in one place 
+  + Kurt Hornik and Friedrich Leisch (Vienna University)
+
+* CRAN: allows users to publish custom packages – much of R’s success and functionality derives from this feature
+
+
+## What is R?
+
+* R v1.0.0 released in 2000
+
+* R adopted by data science community, phenomenal success
+
+* New generation of developers more interested in what R can do and less how it does it
+  + E.g. Hadley Wickham of Rstudio
+
+* 16,731 packages on CRAN as of 29 November 2020
+  + Even more on bioconductor and GitHub etc
+
+
+## What is R?
+
+![Thieme, N., R Generation, Significance, 15 (4), 2018](images/wickham.png)
+
+## What is R?
+
+* 2 ways of writing R code:
+  + Classic / base R
+  + RStudio / tidyverse 
+
+$$\,$$
+
+* Syntax can be quite different:
+  + tidyverse relies on a number of linked packages.
+  + tidyverse aims for simplicity: less coding, more thinking.
+  + Whichever is most intuitive to you, will be best for you!
+
+$$\,$$
+
+* Engine the same
+
+
+# Documentation & tutorials
+
+## Documentation & tutorials
+
+The key to learn R is to know where to get help!
+
+::: notes
+Programming (not just R): have idea, write code, get error, debug.
+:::
+
+$$\,$$
+
+* R help files
+  + Type `?` followed by the name of the command you want to get help on.
+  + Type `help.start()` to open manuals, FAQs and other material.
+
+* CRAN
+  + Tutorials & manuals:[https://cran.r-project.org/manuals.html](https://cran.r-project.org/manuals.html)
+  + Task views: [https://cran.r-project.org/web/views/](https://cran.r-project.org/web/views/)
+
+* Rstudio
+  + Cheatsheets: [https://rstudio.com/resources/cheatsheets/](https://rstudio.com/resources/cheatsheets/)
+
+  
+## Documentation & tutorials
+
+The key to learn R is to know where to get help!
+
+::: notes
+Programming (not just R): have idea, write code, get error, debug.
+:::
+
+$$\,$$
+
+* Why R? webinars [http://whyr.pl/foundation/webinars/](http://whyr.pl/foundation/webinars/)
+
+* R-bloggers [https://www.r-bloggers.com/](https://www.r-bloggers.com/)
+
+* Stack overflow [https://stackoverflow.com/questions/tagged/r](https://stackoverflow.com/questions/tagged/r)
+
+* R Graph Gallery [https://www.r-graph-gallery.com/](https://www.r-graph-gallery.com/)
+
+* Data Camp [https://www.datacamp.com/](https://www.datacamp.com/)
+
+
+## Documentation & tutorials - books
+
+:::::: {.columns}
+::: {.column width="50%"}
+![ ](images/bookGrolemund.png)
+:::
+
+::: {.column width="50%"}
+![ ](images/bookBaumerKaplanHorton.png)
+:::
+::::::
+
+## Documentation & tutorials - books
+
+:::::: {.columns}
+::: {.column width="50%"}
+![ ](images/bookDummies.png)
+:::
+
+::: {.column width="50%"}
+![http://r4ds.had.co.nz](images/bookWickhamGrolemund.png)
+:::
+::::::
+
+
+# R basics
+
+## R basics
+
+* R can be just a calculator.
+
+$$\,$$
+
+* A standard installation of R comes with 15 core and 15 recommended packages:
+  + **Base**: base, compiler, datasets, graphics, grDevices, grid, methods, parallel, splines, stats, stats4, tcltk, tools, translations, utils
+  + **Recommended**: KernSmooth, MASS, Matrix, boot, class, cluster, codetools, foreign, lattice, mgcv, nlme, nnet, rpart, spatial, survival
+
+$$\,$$
+
+* It’s these packages, together with the many more you can install from CRAN and elsewhere that make R so powerful.
+
+
+##
+
+$$\,$$
+
+**Interfaces**
+
+
+## R basics - Interfaces
+
+:::::: {.columns}
+::: {.column width="50%"}
+$$\,$$
+
+* Console / terminal
+
+$$\,$$
+$$\,$$
+$$\,$$
+
+* R GUI
+
+$$\,$$
+$$\,$$
+$$\,$$
+
+* RStudio IDE
+:::
+
+::: {.column width="50%"}
+![](images/rInterfaces_vertical.png)
+:::
+::::::
+
+## R basics - Interfaces - RStudio
+
+![](images/rstudio.png)
+
+## R basics - getting started
+
+$$\,$$
+
+Starting R:
+
+$$\,$$
+
+* Windows / Mac: start R by clicking on the R GUI or RStudio icon.
+
+$$\,$$
+
+* Mac / Linux: in a terminal window type `R` or `R --vanilla` (type `man R` at the terminal to see all options).
+
+## R basics - getting started
+
+$$\,$$
+
+* You will be able to save everything we will type into the R console by typing, at the end of the session, the following at the console:
+	`savehistory(file="RcodeFromSession1.R")`
+
+$$\,$$
+
+* For now: open RStudio, create new project in a new directory (e.g. “RandStatsCourse”) and select
+
+    $\quad$ File $\rightarrow$ New Project...
+
+
+## R basics - explore your environment
+
+Display, store, change the working directory
+
+```{r, collapse=T, size="tiny"}
+wd<-getwd()
+print(wd)
+setwd("../")
+setwd(wd)
+```
+
+List R objects currently in memory (this is the R workspace).
+
+```{r, collapse=T}
+ls()
+```
+
+
+## R basics - explore your environment
+
+Create directories on your hard drive from within R:
+
+```{r, collapse=T, warning=F, message=F}
+dir.create("Session1_output")
+```
+
+$$\,$$
+
+List files in different directories on your computer:
+
+```{r, collapse=T, eval=F}
+list.files()
+list.files("../")
+```
+
+
+## R basics - explore your environment
+
+If you need help or want more info regarding function arguments or exact details of what it does, type ? followed by function name:
+
+```{r, eval=F}
+?ls
+?list.files
+?dir.create
+?read.table
+```
+
+Often most useful to directly skip to the ‘Examples’ section…
+
+
+## R basics - R packages
+
+You will use packages – don’t reinvent the wheel.
+
+Installing packages:
+
+```{r, eval=F}
+install.packages("tidyverse") # note quotation signs
+install.packages(c("rms","pwr"))
+```
+
+Loading packages:
+
+```{r, collapse=T}
+library(tidyverse) # when using R interactively [throws error]
+require(rms) # for inside functions or scripts [throws warning]
+```
+
+
+##
+
+$$\,$$
+
+**Operators**
+
+
+## R basics - operators
+
+* Assignment
+
+  + `=`, `<-`, `<<-`  left assignment
+  + `->`, `->>`  right assignment (rarely used)
+  
+* Arithmetic
+
+  + `+`  addition
+  + `-`  substraction
+  + `*`  multiplication
+  + `/`  division
+  + `^`  exponent
+  + `%%`  modulo (remainder from division)
+  + `%/%`  integer division
+  + `%*%`  matrix multiplication
+  
+  
+## R basics - operators
+
+* Relational
+
+  + `==`  equal to
+  + `!=`  not equal to
+  + `<`  less than
+  + `<=`  less than or equal
+  + `>`  greater than
+  + `>=`  greater than or equal
+ 
+* Logical
+
+  + `!`  logical NOT
+  + `&`  logical AND (element-wise)
+  + `&&`  logical AND (first element only)
+  + `|`  logical OR (element-wise)
+  + `||`  logical OR (first element only)
+ 
+ 
+## R basics - operators
+
+The above operate on vectors:
+
+```{r}
+1:5 / 2
+1:5 %% 2 == 0
+1:5 < 3
+(1:5) ^ (1:5)
+(1:5 %% 2 ==0) & (1:5 < 3)
+```
+ 
+ 
+##
+
+$$\,$$
+
+**Common functions**
+
+## R basics - common functions
+
+R comes with many common functions:
+
+  + `mean()`, `sd()`, `var()`, `cov()`, `cor()`
+  + `min()`, `max()`, `range()`
+  + `median()`, `quantile()`
+  + `sum()`, `prod()`
+  + `log()`, `log2()`, `log10()`, `exp()`
+  + `sqrt()`
+  + `sin()`, `cos()`, `tan()`, `asin()`, `acos()`, `atan()`
+  + `length()`, `dim()`
+  + `is.na()`, `is.null()`, `is.nan()`
+  + `rep()`, `seq()`
+  + `...`
+
+##
+
+$$\,$$
+
+**Data objects / variables**
+
+
+## R basics - R objects
+
+An R object is any variable that you assign a value within R and that is stored in RAM memory.
+
+To assign a value to an object use the `<-` or `=` operator. There is no difference between the two, but the `<-` operator makes it clear this is an assigment and not an equality.
+
+$$\,$$
+
+```{r}
+a<-42
+b="hello"
+c<-TRUE
+```
+
+## R basics - data types
+
+A variable has one of 4 levels of measurement:
+
+* **nominal** - classifies observations into different categories
+  + alive / dead
+  + human, fish, goat, bird
+
+* **ordinal** - different categories, but categories are ordered
+  + low, medium, high
+
+* **interval** - ordered data with degree of difference; ratios not meaningful
+  + temperature in centigrade: difference betwen 10^o^ and 20^o^ same as between 50^o^ and 60^o^ but 20^o^ not twice as hot as 10^o^
+
+* **ratio** - interval data with a unique, non arbitrary zero value; ratios meaningful
+  + temperature in Kelvin
+  + length
+  
+  
+## R basics - data types
+
+:::::: {.columns}
+::: {.column}
+
+R supports the following data types:
+
+* **Character**
+
+```{r}
+a<-c("male","female")
+```
+$$\,$$
+
+* **Integer**
+
+```{r}
+b<-1:4
+```
+$$\,$$
+
+* **Numeric / double**
+
+```{r}
+c<-8/11
+d<-pi
+```
+
+:::
+
+::: {.column}
+
+$$\,$$
+
+* **Logical / boolean**
+
+```{r}
+e<-1:10 %% 2 == 0
+f<-TRUE
+g<-4<2
+```
+$$\,$$
+
+* **Factor / nominal**
+
+```{r}
+h<-factor(sample(a,size=20,replace=T))
+```
+
+
+## R basics - data types
+
+**Useful functions**
+
+Display data type of an object:
+
+```{r, eval=F}
+typeof()
+```
+
+:::
+::::::
+
+Force data type change for an object:
+
+```{r, eval=F}
+as.character()
+as.integer()
+as.numeric()
+as.logical()
+as.factor()
+```
+
+
+## R basics - data types
+
+**Useful functions**
+
+Check if an object is of a specific type:
+
+```{r, eval=F}
+is.character()
+is.integer()
+is.numeric()
+is.logical()
+is.factor()
+```
+
+Create vectors of a specific type of a given length
+
+```{r, eval=F}
+character()
+integer()
+numeric()
+logical()
+```  
+
+Caution: `factor()` encodes existing variable to factor type
+
+
+## R basics - data types
+
+**Dates**
+
+$$\,$$
+
+These can process manually, but easier to use extra packages.
+
+$$\,$$
+
+```{r, message=F, warning=F}
+library(chron)
+library(lubridate) #installed with tidyverse
+```
+
+## R basic - object types
+
+Scalars
+```{r}
+s1<-2
+s2<-8/11
+s3<-exp(1)
+s4<-sqrt(121)
+```
+
+Vectors:
+
+```{r}
+v1<-1:4
+v2<-c(s1,s2,s3,s4)
+v3<-rep(4,11)
+v4<-seq(1,10,by=1)
+v5<-c(21,13,37)
+```
+
+
+## R basic - object types
+
+Matrices
+
+```{r}
+M1<-cbind(v1,v2)
+M2<-matrix(1:12,nrow=3,byrow=T)
+M3<-diag(4)
+M4<-v1 %*% t(v4)
+```
+
+Arrays
+
+```{r}
+A<-table(mtcars$cyl,mtcars$gear,mtcars$am)# 3x3x2 array
+```
+
+
+## R basic - object types
+
+Lists
+
+```{r}
+l1<-list(s1,v1,M1)
+l2<-strsplit(split="_", c("Deus_Phiri", "Esther_Banda"))
+```
+
+Data frames
+
+```{r}
+df1<-as.data.frame(M2)
+df2<-data.frame(ID=1:3,
+                sex=c("m","f","f"),
+                age=v5,
+                adult=ifelse(v5>17,1,0))
+```
+
+Tibbles
+
+```{r, collapse=T}
+# requires the tibble package (installed with tidyverse)
+library(tibble)
+t1<-as_tibble(df2)
+```
+
+
+##
+
+$$\,$$
+
+**Reading & writing data**
+
+
+## R basics - writing data
+
+Let’s load some data:
+```{r, collapse=T}
+data(iris) # not really required...
+ls() # new object "iris"
+```
+
+
+Now let’s write this to a file:
+
+```{r}
+write.table(iris,
+            file="Session1_output/iris.tab",
+            sep="\t",
+            row.names=F, col.names=T,
+            quote=F)
+```
+
+
+## R basics - writing data
+
+Alternatively:
+
+```{r}
+write.table(iris,
+            file="Session1_output/iris.csv",
+            sep=",",
+            row.names=F,
+            col.names=T,
+            quote=F)
+```
+
+Or:
+
+```{r}
+write.csv(iris,file="Session1_output/iris2.csv")
+```
+
+Or:
+
+```{r}
+write_csv(iris,path="Session1_output/iris3.csv") # tidyverse / readr
+```
+
+## R basics - writing data
+
+There is even a complicated way of doing the same thing: write each line individually.
+
+```{r}
+fileCon<-file("Session1_output/iris4.csv","w")
+
+cat(paste(sep="",
+          paste(collapse=",",c(colnames(iris))),"\n"),
+          file=fileCon)
+
+for(i in 1:nrow(iris)){
+  cat(paste(sep="",
+            paste(collapse=",",iris[i,]),"\n"),
+            file=fileCon)
+}
+
+close(fileCon)
+```
+
+## R basics - writing data
+
+You can also save to a binary, R format file.
+
+This takes up less space on the hard drive and loads faster.
+
+$$\,$$
+
+```{r}
+save(iris,file="Session1_output/iris.RData") # preserves variable name
+saveRDS(iris,file="Session1_output/iris.rds") # does not preserve variable name
+```
+
+
+## R basics - reading data
+
+Let's read the data we just wrote to the disc back into R.
+
+$$\,$$
+**Text files**
+
+```{r, message=F, warning=F}
+newiris<-read.table(sep="\t",header=T,"Session1_output/iris.tab")
+newiris2<-read.csv("Session1_output/iris.csv")
+newiris3<-read_csv("Session1_output/iris3.csv") # tidyverse / readr
+newiris4<-read_tsv("Session1_output/iris.tab") # tidyverse / readr
+```
+
+
+## R basics - reading data
+
+**Check:**
+
+```{r, collapse=T}
+dim(iris); dim(newiris); dim(newiris2); dim(newiris3)
+sum(iris!=newiris)
+head(iris); head(newiris); head(newiris2); head(newiris3)
+```
+
+
+## R basics - reading data
+
+**Text files**
+
+* `read.table()` and `read.csv()` determine the number of columns from looking at the first 5 lines of data; if not all rows have the same number of columns:
+
+    + Specify number of columns via `col.names` argument.
+    + Use `fill=T` if incomplete line in data (careful though with this).
+
+* `read.table()` and `read.csv()` will result in a data frame with data types for columns guessed from looking at what values each column contains; can specify these explicitly with the `colClasses=c("numeric","character","factor","integer",...)` argument; also by default all character columns will be converted to factors – use `stringsAsFactors=F` if this is not desired.
+
+* `read_csv()` and `read_tsv()` only look at first 1000 rows to guess column types.
+
+* `read_csv()` and `read_tsv()` have the `col_types` argument to specify column types manually.
+
+
+## R basics - reading data
+
+**Text files**
+
+* `read.table()` and `read.csv()` call `scan()`
+
+    + Can use `scan()` directly; this can be faster.
+    + In general: `scan()` and `readLines()` are the basic blocks to read text files, but you will need to process (i.e. split into columns etc) the content of each line manually.
+    + This can be convenient for large files, when you do not want  / are not able to read the whole file into memory all at once.
+
+
+## R basics - reading data
+
+**Other formats**
+
+```{r, message=F, warning=F}
+library(foreign)
+```
+
+$$\,$$
+
+  + Stata (up to Stata 12 dta format)
+  + SPSS
+  + Epi Info
+  + Minitab
+  + Octave / Matlab
+  + ...
+
+$$\,$$
+
+**Stata** dta format versions can be painful
+
+```{r, message=F, warning=F} 
+library(readstata13)
+```
+
+
+## R basics - reading data
+
+**Other formats**
+
+Excel and other spreadsheets
+
+  + Tricky: several sheets, formulae, macros, …
+  + Best: export as text file
+  + Otherwise:
+
+```{r, message=F, warning=F, eval=F}  
+library(xlsx)
+library(XLConnect)
+library(readxl)
+```
+
+
+Can also write Excel formats:
+
+```{r, message=F, warning=F} 
+library(xlsx)
+library(dataframes2xls) # xls only
+library(WriteXLS) # xls only
+```
+
+
+## R basics - reading data
+
+**Relational databases**
+
+* Front-end + database management system (DBMS) specific back-end:
+
+```{r, message=F, warning=F}
+library(DBI) # front-end
+```
+
+```{r, message=F, warning=F, eval=F}
+library(RMySQL) # back-end
+library(ROracle)  # back-end
+library(RPostgreSQL) # back-end
+library(RSQLite) # back-end
+```
+
+
+* Interact with any open database connectivity DBMS:
+
+  + Very versatile
+  + Same R code for different database systems  
+
+```{r, message=F, warning=F}
+library(RODBC) 
+```
+
+
+## R basics - reading data
+
+**Binary data formats**
+
+* `load()` for saved workspaces and objects saved using `save()`. Object names in R will be the same as when they were saved, no object assignment:
+
+```{r}
+load("Session1_output/iris.RData")
+```
+
+* `readRDS()` for objects saved using `saveRDS()`. Need to assign to an object:
+
+```{r}
+obj<-readRDS("Session1_output/iris.rds")
+```
+
+
+## R basics - reading data
+
+**Image data** – yes images are just data
+
+* Bitmaps
+
+```{r, eval=F}
+library(bmp)
+read.bmp()
+```
+
+* PNG
+
+```{r, eval=F}
+library(png)
+readPNG()
+writePNG()
+```
+
+* JPEG / JPG
+
+```{r, eval=F}
+library(jpeg)
+readJPEG()
+writeJPEG()
+```
+
+
+## R basics - reading data
+
+```{r,echo=F}
+library(png)
+```
+
+```{r}
+img<-readPNG("images/Rlogo.png")
+```
+
+```{r, collapse=T}
+img[1:2,1:4,1] # red channel
+```
+
+```{r, collapse=T}
+img[1:2,1:4,2] # green channel
+```
+
+```{r, collapse=T}
+img[1:2,1:4,3] # blue channel
+```
+
+```{r, collapse=T}
+img[1:2,1:4,4] # alpha channel
+```
+
+
+## R basics - reading data
+
+```{r}
+d<-dim(img)
+
+plot(c(1,d[1]),c(1,d[2]),type="n",axes=F,xlab="",ylab="",asp=1)
+for(i in 1:d[1]){
+  for(j in 1:d[2]){
+    points(j,d[2]-i+1,col=rgb(img[i,j,1],img[i,j,2],img[i,j,3]),pch=15,cex=3)
+  }
+}
+```
+
+
+##
+
+$$\,$$
+
+**Working with R variables / data objects**
+
+
+## R basics: handling data
+
+* Create and combine vectors:
+  `c()`, `rep()`
+
+```{r}
+v6<-c(14,89)
+v7<-rep(v6,3)
+v8<-c(0,v7)
+v9<-c("Chimwemwe","Grace","Elvis")
+```
+
+
+* Join vectors, matrices, data frames and add variables:
+  `cbind()`, `rbind()`, `data.frame()`, `mutate()`, `transmute()`
+  
+```{r}
+M5<-cbind(1:length(v9),v9)
+M6<-rbind(c(0,"Chimwemwe"),M5)
+df3<-data.frame(ID=1:length(v9),name=v9)
+```
+
+
+## R basics: handling data
+
+* Join vectors, matrices, data frames and add variables (cont'd):
+
+```{r}
+irisNewCol<-cbind(iris,iris$Sepal.Length/iris$Petal.Length)
+irisNewCol2<-mutate(iris, # tidyverse; base R equivalent is transform()
+                    LRatio=Sepal.Length/Petal.Length,
+                    WRatio=Sepal.Width/Petal.Width)
+irisNewCol3<-transmute(iris, # tidyverse
+                       LRatio=Sepal.Length/Petal.Length,
+                       WRatio=Sepal.Width/Petal.Width)
+```
+
+
+## R basics: handling data
+
+* Extract rows
+
+```{r, eval=F}
+M6[2:4,]; M6[-1,]; M6[,2]
+df2[df2$sex=="f",]
+iris[iris$Species=="setosa",]
+iris[which(iris$Species=="setosa"),]
+iris[match("setosa",iris$Species),]
+iris %>% filter(Species=="setosa")
+subset(iris, Species=="setosa")
+iris[iris$Petal.Length>5 & iris$Petal.Length<6,]
+```
+
+
+## R basics: handling data
+
+* Extract columns
+
+```{r, eval=F}
+iris[,colnames(iris)=="Petal.Length" | colnames(iris)=="Petal.Width"]
+iris[,is.element(el=colnames(iris),
+                 set=c("Petal.Length","Petal.Width"))]
+iris %>% select(Petal.Length,Petal.Width)
+subset(iris, select=c("Petal.Length","Petal.Width"))
+iris[,grepl(colnames(iris),pattern="Species")]
+iris$Species
+```
+
+
+## R basics: handling data
+
+* Extract both rows and columns
+
+```{r, eval=F}
+iris[1:5,c(1,3,5)]
+subset(iris, 
+       Species=="setosa", 
+       select=c("Petal.Length", "Petal.Width"))
+```
+
+## R basics: handling data
+
+**Joins**
+
+Combining data from different tables:
+
+```{r, eval=F}
+inner_join() 
+left_join() # almost always what you want to do
+right_join()
+outer_join()
+# tidyverse; similar to SQL
+```
+
+```{r, eval=F}
+merge()
+# classic R
+# which join specified by all.x=T/F, all.y=T/F
+```
+
+You can manually join tables: you need to use `rbind()`, `cbind()`, `match()` a lot... [not recommended]
+
+
+## R basics: handling data
+
+![Wickham, H. & Grolemund G., R for Data Science, O’Reilly, 2016](images/joins.png)
+
+
+## R basics: handling data
+
+![Wickham, H. & Grolemund G., R for Data Science, O’Reilly, 2016](images/joinsVenn.png)
+
+
+## R basics: handling data
+
+Some more joins:
+
+```{r, eval=F}
+semi_join(x,y)
+# keeps all observations in x that have a match in y
+
+anti_join(x,y)
+# drops all observations in x that have a match in y
+```
+
+
+## R basics: handling data
+
+* Set operations
+
+```{r, eval=F}
+intersect()
+union()
+setdiff()
+```
+
+These work not just on vectors, but on data frames too.
+
+Try it:
+
+```{r, collapse=T}
+v10<-1:6
+v11<-5:10
+df1<-data.frame(x=1:2,y=c(1,1))
+df2<-data.frame(x=c(1,1),y=1:2)
+```
+
+```{r, eval=F}
+intersect(v10,v11)
+setdiff(df2,df1)
+union(df1,df2)
+```
+
+
+## R basics: handling data
+
+**Repeated measurements: wide & long formats**
+
+```{r}
+datWide <- read.table(header=TRUE, text='
+                      subject sex control cond1 cond2
+                      1       M       7.9  12.3  10.7
+                      2       F       6.3  10.6  11.1
+                      3       F       9.5  13.1  13.8
+                      4       M      11.5  13.4  12.9
+                      ')
+datWide$subject <- factor(datWide$subject)
+```
+
+$$\,$$
+
+This is the *wide* format: 1 individual per row, multiple observations of the same variable under different conditions or fixed timepoints.
+
+
+## R basics: handling data
+
+**Wide to long:** `pivot_longer()` or `gather()` (deprecated)
+
+```{r, collapse=T}
+datLong <- pivot_longer(datWide,cols=c(control,cond1,cond2),names_to="condition",values_to="measurement")
+# datLong <- gather(datWide, key="condition", value="measurement", control, cond1, cond2, factor_key=TRUE)
+
+head(datLong)
+```
+
+
+## R basics: handling data
+
+**Long to wide:** `pivot_wider()` or `spread()` (depecrated)
+
+```{r, collapse=T}
+pivot_wider(data=datLong,names_from=condition,values_from=measurement)
+#spread(datLong, key="condition", value="measurement")
+```
+
+$$\,$$
+
+Note: if you have longitudinal data with variable time points, you can only use the long format.
+
+
+## R basics: handling data
+
+`pivot_longer`, `pivot_wider`, `gather()` and `spread()` are tidyverse functions.
+
+You can also use `reshape()` from base R:
+
+```{r, collapse=T}
+# wide to long
+datLong2<- reshape(datWide,
+                   direction="long",
+                   varying=list(c("control","cond1","cond2")),
+                   v.names="measurement",
+                   timevar="condition",
+                   times=c("control","cond1","cond2"),
+                   idvar=c("subject"))
+datLong2
+```
+
+
+## R basics: handling data
+
+```{r, collapse=T}
+# long to wide
+datWide2<-reshape(datLong,
+                  direction="wide",
+                  idvar=c("subject","sex"),
+                  timevar="condition")
+
+colnames(datWide2)<-gsub(colnames(datWide2),pattern="measurement\\.",replacement="")
+# just tidying up columns names
+
+datWide2
+```
+
+
+## R basics: handling data
+
+Operating on vectors / matrices / arrays / data frames / lists
+
+* For loops
+
+```{r}
+v12a<-integer(6)
+for(i in 1:6){
+  v12a[i]<-v10[i] + v11[i]
+}
+```
+
+* -pply functions
+
+```{r}
+M7<-cbind(v10,v11)
+v12b<-apply(FUN=sum,MARGIN=1,X=M7)
+```
+
+* Vectorise (where possible)
+
+```{r}
+v12c<-v10 + v11
+```
+
+
+## R basics: handling data
+
+* Pipes [tidyverse only]
+
+  + Similar to pipes on UNIX terminals
+  + Idea: pass output from one command to another without storing intermediate results
+  + Easier to read code (if you are used to it!) & less clutter
+  
+* These do the same thing:
+
+```{r, collapse=T, eval=F}
+# with pipes
+iris %>%
+  mutate(LR=Sepal.Length/Petal.Length,
+         WR=Sepal.Width/Petal.Width)   %>%
+  select(Species,LR,WR)
+```
+
+```{r, collapse=T, eval=F}
+# base R
+irisTmp<-mutate(iris,
+                LR=Sepal.Length/Petal.Length,
+                WR=Sepal.Width/Petal.Width)
+select(irisTmp,Species,LR,WR)
+```
+
+
+##
+
+$$\,$$
+
+**R workspace: saving & recovering**
+
+
+## R basics: workspace
+
+* R workspace = 
+
+  + Working directory
+  + History of commands
+  + All objects in memory
+
+$$\,$$ 
+
+* By default R will ask you to save this when you terminate a session.
+  + Useful e.g. for models that take a long time to run.
+
+$$\,$$
+
+* Generally better to keep R scripts and re-create your R workspace each time – difficult / impossible to do it the other way around!
+
+$$\,$$
+
+* You can turn saving workspace and restoring it by default off:
+
+  + Tools $\rightarrow$ Global Options...
+
+
+## R basics: workspace
+
+![](images/workspace.png)
+
+
+## R basics: workspace
+
+* Save all objects in memory:
+
+```{r}
+save(list=ls(),file="Session1_output/workspaceSave.RData")
+```
+
+$$\,$$
+
+* Recover the workspace:
+
+```{r}
+load(file="Session1_output/workspaceSave.RData")
+```
+
+$$\,$$
+
+* Save history of all commands commands typed during session:
+
+```{r, eval=F}
+savehistory(file="Session1_output/Rcommands.Rhistory")
+```
+
+
+##
+
+$$\,$$
+
+**Writing R functions**
+
+
+## R basics: functions
+
+If you find yourself repeating the same commands over and over: you need to write a function
+
+$$\,$$
+
+```{r, eval=F}
+myFunction<-function(argument1,argument2,...){
+  ...
+}
+```
+
+
+## R basics: functions
+
+* Rather than do this
+
+```{r, eval=F}
+mean(var1); sd(var1)
+quantile(var1,probs=c(0.5,0.25,0.75)); sum(!is.na(var1))
+
+mean(var2); sd(var2)
+quantile(var2,probs=c(0.5,0.25,0.75)); sum(!is.na(var2))
+
+mean(var3); sd(var3)
+quantile(var3,probs=c(0.5,0.25,0.75)); sum(!is.na(var3))
+```
+
+
+## R basics: functions
+
+* Write a function:
+
+```{r}
+sumStatsContVars<-function(x,na.rm=T,...){
+  m<-mean(x,na.rm=na.rm)
+  s<-sd(x,na.rm=na.rm)
+  q<-quantile(x,na.rm=na.rm,...)
+  n<-sum(!is.na(x))
+	return(c(m,s,q,n))
+}
+```
+
+
+## R basics: functions
+
+* Example
+
+```{r}
+# create data matrix
+X<-matrix(cbind(rnorm(100),
+                rexp(100),
+                rchisq(100,df=1),
+                rbeta(100,shape1=0.5,shape2=0.5),
+                runif(100)),
+          nrow=100, byrow=F,
+          dimnames=list(NULL,c("x","y","z","w","v")))
+
+# randomly set some values to missing
+X[sample(1:length(X),size=50)]<-NA
+```
+
+## R basics: functions
+
+* Example
+
+```{r}
+# compute summary statistics using custom function
+sumStats<-t(apply(FUN=sumStatsContVars,X=X,MARGIN=2,probs=c(0.5,0.25,0.75)))
+cnames<-c("mean","sd","median","p25","p75","n")
+colnames(sumStats)<-cnames
+
+# print results
+print(sumStats)
+```
+
+
+# R scripts, editors, version control
+
+## R scripts
+
+* Use the console for experimenting / trying things out / exploring.
+
+$$\,$$
+
+* For your analyses / graphs: write R scripts
+
+  + These are just text files containing your R code.
+  + You can easily re-run everything $\rightarrow$ reproducibility.
+  + Save custom R functions to scripts that you can `source()` in other scripts.
+  + Collaborate with others by sharing scripts.
+
+$$\,$$
+
+* If sharing scripts with others: comment your scripts.
+
+```{r}
+# this is a comment explaining what the chunk of code does
+```
+
+
+## Editors
+
+* R Studio comes with an editor: upper left panel.
+
+$$\,$$
+
+* Other editors:
+
+  + Any text editor will do (but not word processors like MS Word!).
+  + Notepad++
+
+$$\,$$
+
+* If you have access to UNIX-like terminals:
+
+  + Emacs
+  + Vi / Vim
+  + Nano
+
+
+## Version control
+
+* You may change your mind about some code much later after it was written and want to recover a previous version.
+
+$$\,$$
+
+* You have updated a script, but a reviewer forces you to redo something the way you did it at submission. This is important for reproducible science.
+
+  + Can be catastrophic if you do not have some kind of version control.
+
+$$\,$$
+
+* You can do manual version control by e.g. dating scripts.
+
+$$\,$$
+
+* Better: git & GitHub (www.github.com)
+
+
+[end of Session 1]
