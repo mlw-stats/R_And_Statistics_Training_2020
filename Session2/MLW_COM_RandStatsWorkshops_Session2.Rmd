@@ -1,0 +1,803 @@
+---
+title: "Statistics and R short course"
+author: "Marc Henrion"
+date: "30 November 2020"
+output:
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE, fig.width=16, fig.height=9, dpi=150, highlight=T)
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+```
+
+# Session 2: Data visualisation in R
+
+## Preliminaries
+
+* Certificates of attendance
+  + You need to attend the first 7 sessions.
+  + Sign in & check spelling of name on the sign-in sheet!
+  + Only issued if paid-up and in exchange for completed feedback form.
+
+$$\,$$ 
+
+* Participant packs (copy of slides, R code etc.)
+  + [https://github.com/mlw-stats/R_And_Statistics_Training_2020](https://github.com/mlw-stats/R_And_Statistics_Training_2020)
+  
+$$\,$$ 
+  
+* Housekeeping
+  + Covid-19 measures
+  + Refreshments
+  + Fire exits
+  + Bathrooms
+  + RStudio Cloud 
+
+
+## Resource
+
+We will only cover basic graphs here.
+
+Much more complex & polished graphs will take quite a bit of coding and / or rely on dedicated libraries.
+
+A superb resource for idenitfying what kind of figure you want to generate, with tutorials on how to do this, can be found at
+
+[https://www.r-graph-gallery.com/](https://www.r-graph-gallery.com/)
+
+Also very useful, the `ggplot2` cheat sheet:
+
+[https://raw.githubusercontent.com/rstudio/cheatsheets/master/data-visualization-2.1.pdf](https://raw.githubusercontent.com/rstudio/cheatsheets/master/data-visualization-2.1.pdf)
+
+
+
+# Data types
+
+## Data types
+
+Recall from Session 1: a variable has one of 4 levels of measurement:
+
+* **nominal** - classifies observations into different categories
+  + alive / dead
+  + human, fish, goat, bird
+
+* **ordinal** - different categories, but categories are ordered
+  + low, medium, high
+
+* **interval** - ordered data with degree of difference; ratios not meaningful
+  + temperature in centigrade: difference betwen 10^o^ and 20^o^ same as between 50^o^ and 60^o^ but 20^o^ not twice as hot as 10^o^
+
+* **ratio** - interval data with a unique, non arbitrary zero value; ratios meaningful
+  + temperature in Kelvin
+  + length
+  
+  
+## Data types
+
+R supports the following data types:
+
+* **Character**
+
+* **Integer**
+
+* **Numeric / double**
+
+* **Logical / boolean**
+
+* **Factor / nominal**
+
+
+## Data types
+
+$$\,$$
+
+How to plot the data depends the types of the variable(s) you are going to plot.
+
+
+# Main graphical libraries
+
+## Graphical libraries
+
+As we have seen in Session 1, there are 2 main ways to do R: base R and tidyverse R. The same is true for prooducing figures:
+
+* `graphics` library [base R]
+    + A different function for each type of graph. Clunky syntax.
+    + Lots of control over graphical parameters, generally functions do little guessing for sensible values and use fixed defaults.
+    + You can usually get the figure to look exactly like you want.
+
+* `ggplot2` library [tidyverse R]
+    + “Grammar of graphics” $\rightarrow$ consistent syntax for all types of graphs. Splits graphs into different elements: data, aesthetic mappings, geoms, ...
+    + Lots of automatic guessing for sensible parameter values. Sometimes tedious to override default behaviour.
+    + Easier to quickly get nice looking figures, (sometimes) harder to get exactly what you want...
+    + If used in functions / scripts, need to enclose plotting command in a `print()` statement.
+
+
+## Graphical libraries
+
+![The basics behind ggplot2 (https://raw.githubusercontent.com/rstudio/cheatsheets).](images/ggplotBasics.png)
+
+# Distribution figures
+
+
+## Distribution figures
+
+Distributions: what values did you record for a given variable?
+
+$$\,$$
+
+* Discrete values (nominal, ordinal, integer-valued) values:
+    + bar plots
+    + pie charts
+
+$$\,$$
+
+* Continuous values
+    + histograms
+
+
+## Distribution figures
+
+Let's generate some data:
+
+```{r}
+typesTmp<- paste(sep="","type",1:3)
+type<-factor(sample(typesTmp,
+                    size=1000,
+                    replace=T,
+                    prob=c(0.45,0.3,0.25)))
+x1<-rbinom(1000,size=1,prob=0.25)
+x2<-rpois(1000,lambda=ifelse(type=="type3",6,4))
+dat<-data.frame(type,x1,x2)
+```
+
+
+## Distribution figures
+
+**Distributions: bar plots**
+
+* graphics:
+
+```{r}
+barplot(table(dat$x1),cex.names=2)
+barplot(table(dat$x2),cex.names=2)
+barplot(table(dat$type),cex.names=2)
+
+barplot(table(dat$type,dat$x2),
+        beside=T,
+        legend.text=levels(dat$type),
+        cex.names=2)
+```
+
+* Can specify some options:
+
+```{r}
+barplot(table(dat$x2),
+        col="steelblue",
+        xlab="values",
+        ylab="count",
+        main="Barplot",
+        cex.names=2,
+        cex.axis=2,
+        cex.lab=2,
+        cex.main=2)
+
+barplot(table(dat$x2),horiz=T,cex.names=2)
+```
+
+
+## Distribution figures
+
+* ggplot2:
+
+```{r}
+ggplot(data=dat,mapping=aes(x=x1)) +
+  geom_bar()
+ggplot(data=dat,mapping=aes(x=x2)) +
+  geom_bar()
+ggplot(data=dat,mapping=aes(x=type)) +
+  geom_bar()
+
+dat %>%
+  count(type,x2) %>%
+  complete(type,x2,fill=list(n=0)) %>%
+  ggplot(mapping=aes(fill=type,y=n,x=x2)) +
+  geom_bar(position="dodge",stat="identity") +
+  theme(text = element_text(size=20))
+```
+
+* Can also specify options:
+
+```{r}
+ggplot(data=dat,mapping=aes(x=x2)) + 
+  geom_bar() +
+  coord_flip() +
+  ggtitle("Barplot for variable x2") +
+  xlab("values") +
+  ylab("count") +
+  theme(text = element_text(size=20))
+```
+
+
+
+## Distribution figures
+
+Shortcut in ggplot2 for users more familiar with base R:
+
+```{r, eval=F}
+qplot(dat$x1,geom="bar")
+qplot(dat$x2,geom="bar")
+qplot(dat$type,geom="bar")
+```
+
+```{r, echo=F}
+g1<-qplot(dat$x1,geom="bar")
+g2<-qplot(dat$x2,geom="bar")
+g3<-qplot(dat$type,geom="bar")
+
+grid.arrange(g1,g2,g3,nrow=1)
+```
+
+
+## Distribution figures
+
+**Distributions: pie charts**
+
+* graphics:
+
+```{r}
+pie(table(dat$type))
+```
+
+* ggplot2:
+
+```{r}
+ggplot(dat, mapping=aes(x=factor(1), fill=factor(type))) +
+  geom_bar(width = 1) +
+  coord_polar("y") + 
+  xlab("") +
+  theme_void()
+```
+
+Note:
+
+Generally, R discourages the use of pie charts (they are horrible & misleading).
+
+
+## Distribution figures
+
+**Distributions: histograms**
+
+* Summarise the distribution of continuous variables, by binning data into discrete intervals.
+
+* Can be used for binary and discrete variables as well, but barplots better suited for such variables.
+
+
+Let's generate some more data:
+
+```{r}
+dat<-mutate(dat,
+            x3=ifelse(type=="type1",
+                      rnorm(500,mean=-2),
+                      ifelse(type=="type2",
+                             rnorm(500,mean=2),
+                             runif(500))))
+```
+
+## Distribution figures
+
+* graphics:
+
+```{r}
+hist(dat$x3)
+hist(dat$x3,xlab="normal data",main="Histogram",col="grey",breaks=50)
+hist(dat$x3,xlab="normal data",main="Histogram",col="grey",freq=F)
+hist(dat$x3,xlab="normal data",main="Histogram",col="grey",xlim=c(-10,10))
+```
+
+
+* ggplot2:
+
+```{r}
+ggplot(data=dat,mapping=aes(x=x3)) +
+  geom_histogram()
+
+ggplot(data=dat,mapping=aes(x=x3)) +
+  geom_histogram(binwidth=0.1)
+
+ggplot(data=dat,mapping=aes(x=x3,stat(density))) +
+  geom_histogram(binwidth=0.15)
+
+ggplot(data=dat,mapping=aes(x=x3,stat(density))) +
+  geom_histogram(binwidth=0.15) +
+  coord_cartesian(xlim = c(-10, 10)) +
+  ggtitle("Histogram") +
+  theme(text=element_text(size=24))
+```
+
+
+## Distribution figures
+
+* graphics:
+
+```{r, eval=F}
+hist(dat$x3,xlab="normal data",main="Histogram",col="grey",freq=F,breaks=50)
+lines(density(dat$x3,bw="SJ"))
+
+h<-hist(dat$x3,breaks=50,plot=F)
+col1<-col2rgb("steelblue")
+col1<-rgb(col1[1],col1[2],col1[3],alpha=150,maxColorValue=255)
+col2<-col2rgb("salmon")
+col2<-rgb(col2[1],col2[2],col2[3],alpha=150,maxColorValue=255)
+col3<-col2rgb("orange")
+col3<-rgb(col3[1],col3[2],col3[3],alpha=150,maxColorValue=255)
+hist(dat$x3[dat$type=="type1"],xlab="x3",main="",col=col1,breaks=h$breaks,ylim=range(h$counts))
+hist(dat$x3[dat$type=="type2"],col=col2,breaks=h$breaks,add=T)
+hist(dat$x3[dat$type=="type3"],col=col3,breaks=h$breaks,add=T)
+legend(x="topright",col=c("steelblue","salmon","orange"),pch=15,cex=2,legend=levels(dat$type),bty="n")
+```
+
+
+```{r, echo=F}
+par(mfrow=c(1,2))
+
+hist(dat$x3,xlab="normal data",main="Histogram",col="grey",freq=F,breaks=50)
+lines(density(dat$x3,bw="SJ"))
+
+h<-hist(dat$x3,breaks=50,plot=F)
+col1<-col2rgb("steelblue"); col1<-rgb(col1[1],col1[2],col1[3],alpha=150,maxColorValue=255)
+col2<-col2rgb("salmon"); col2<-rgb(col2[1],col2[2],col2[3],alpha=150,maxColorValue=255)
+col3<-col2rgb("orange"); col3<-rgb(col3[1],col3[2],col3[3],alpha=150,maxColorValue=255)
+hist(dat$x3[dat$type=="type1"],xlab="x3",main="",col=col1,breaks=h$breaks,ylim=range(h$counts))
+hist(dat$x3[dat$type=="type2"],col=col2,breaks=h$breaks,add=T)
+hist(dat$x3[dat$type=="type3"],col=col3,breaks=h$breaks,add=T)
+legend(x="topright",col=c("steelblue","salmon","orange"),pch=15,cex=2,legend=levels(dat$type),bty="n")
+```
+
+
+
+## Distribution figures
+
+* ggplot2:
+
+```{r, eval=F}
+ggplot(data=dat,mapping=aes(x=x3,stat(density))) +
+  geom_histogram(binwidth=0.15) +
+  geom_density(bw="SJ",col="blue",lwd=1)
+
+ggplot(data=dat,mapping=aes(x=x3,fill=type)) +
+  geom_histogram(binwidth=0.15,position="dodge")
+```
+
+```{r, echo=F}
+g1<-ggplot(data=dat,mapping=aes(x=x3,stat(density))) +
+  geom_histogram(binwidth=0.15) +
+  geom_density(bw="SJ",col="blue",lwd=1)
+
+g2<-ggplot(data=dat,mapping=aes(x=x3,fill=type)) +
+  geom_histogram(binwidth=0.15,position="dodge")
+
+grid.arrange(g1,g2,nrow=1)
+```
+
+
+# Covariation figures
+
+
+## Covariation figures
+
+**Covariation: box & whisker, violin plots**
+
+Is there a relationship between a binary / discrete / categorical and a continuous variable?
+
+* graphics:
+
+```{r}
+boxplot(data=dat,x3~type)
+boxplot(data=dat,x3~type,horizontal=T)
+```
+
+
+## Covariation figures
+
+* ggplot2:
+
+```{r}
+ggplot(data=dat,mapping=aes(x=type,y=x3)) +
+  geom_boxplot()
+
+ggplot(data=dat,mapping=aes(x=type,y=x3)) +
+  geom_jitter(width=0.25,height=0) +
+  geom_boxplot(alpha=0.5)
+
+ggplot(data=dat,mapping=aes(x=type,y=x3)) +
+  geom_boxplot() +
+  coord_flip()
+```
+
+
+## Covariation figures
+
+![Wickham, H. & Grolemund G., R for Data Science, O’Reilly, 2016](images/boxWhiskerPlot.png)
+
+
+## Covariation figures
+
+
+**Covariation: violin plots**
+
+Combines histogram and box plot.
+
+Not natively supported by graphics library (need `vioplot` library), but is supported by ggplot2.
+
+```{r}
+ggplot(data=dat,mapping=aes(x=type,y=x3,fill=type)) +
+  geom_violin() +
+  geom_boxplot(width=0.05, fill="white")
+```
+
+
+## Covariation figures
+
+**Covariation: scatter plots**
+
+* Probably the most basic, most used and most useful plot.
+
+* Let’s generate some more data.
+
+```{r}
+dat<-mutate(dat,x4=rnorm(nrow(dat),mean=x3))
+```
+
+* graphics:
+
+```{r}
+plot(dat$x3,dat$x4)
+plot(x4~x3,data=dat)
+```
+
+
+## Covariation figures
+
+* ggplot2:
+
+```{r}
+ggplot(data=dat,mapping=aes(x=x3,y=x4)) +
+  geom_point()
+```
+
+
+## Covariation figures
+
+* graphics:
+
+```{r}
+plot(x4~x3,data=dat,main="scatterplot",
+     col=c("steelblue","salmon","orange")[as.integer(dat$type)],pch=20)
+abline(a=0,b=1,lty=2,lwd=2,col="darkgrey")
+legend(x="topright",col=c("steelblue","salmon","orange"),pch=20,
+       legend=levels(dat$type))
+```
+
+## Covariation figures
+
+* ggplot2:
+
+```{r}
+ggplot(data=dat,mapping=aes(x=x3,y=x4,col=type)) +
+  geom_point() +
+  geom_smooth() +
+  scale_colour_manual(values=c("steelblue","salmon","orange"),
+                      name="Type") +
+  xlab("Variable x3") +
+  ylab("Variable x4") +
+  ggtitle("A covariation plot.") +
+  theme_light() +
+  theme(text=element_text(size=20))
+```
+
+
+## Covariation figures
+
+$$\,$$
+
+Note that the code for the previous figure shows you how to customise colours, labels, background etc. in `ggplot2`.
+
+
+## Covariation figures
+
+**Covariation: line & time plots**
+
+Prepare some data:
+
+```{r}
+beaver<-rbind(beaver1[beaver1$day==346,],beaver2[beaver2$day==307,])
+beaver<-data.frame(
+  name=c(rep("beaver1",sum(beaver1$day==346)),
+         rep("beaver2",sum(beaver2$day==307))),beaver)
+```
+
+
+## Covariation figures
+
+**Covariation: line & time plots**
+
+* graphics
+
+```{r}
+plot(temp~time,data=beaver[beaver$name=="beaver1",],type="l")
+plot(temp~time,data=beaver,type="n",col="red",lwd=2)
+lines(temp~time,data=beaver[beaver$name=="beaver1",],col="red",lwd=2)
+lines(temp~time,data=beaver[beaver$name=="beaver2",],col="blue",lwd=2)
+legend(x="bottomright",col=c("red","blue"),lwd=2,legend=c("beaver1","beaver2"))
+```
+
+
+## Covariation figures
+
+* ggplot2
+
+```{r}
+beaver %>%
+  filter(name=="beaver1") %>%
+  ggplot(mapping=aes(x=time,y=temp)) +
+    geom_line()
+
+ggplot(data=beaver,mapping=aes(x=time,y=temp,colour=name)) +
+  geom_line(lwd=2)
+```
+
+
+## Covariation figures
+
+**Covariation: heat maps**
+
+* data
+
+```{r}
+dmnds<-diamonds %>%
+  count(cut,color)
+```
+
+
+* ggplot2
+
+```{r}
+ggplot(data=dmnds, mapping=aes(x=color,y=cut,fill=n)) + 
+  geom_tile()
+```
+
+
+## Covariation figures
+
+* graphics
+
+```{r}
+plotData<-matrix(nrow=length(unique(dmnds$cut)),ncol=length(unique(dmnds$color)))
+rownames(plotData)<-unique(dmnds$cut)
+colnames(plotData)<-unique(dmnds$color)
+for(i in 1:nrow(plotData)){
+  for(j in 1:ncol(plotData)){
+    plotData[i,j]<-dmnds$n[dmnds$cut==rownames(plotData)[i] &
+                           dmnds$color==colnames(plotData)[j]]
+  }
+}
+image(t(plotData),axes=F,xlab="colour",ylab="cut")
+axis(side=1,labels = colnames(plotData),at=seq(0,1,length=ncol(plotData)))
+axis(side=2,labels=rownames(plotData),at=seq(0,1,length=nrow(plotData)))
+```
+
+
+## Covariation figures
+
+**Covariation: heat maps and contour plots**
+
+Generate some data:
+
+```{r}
+dens<-function(x,y){
+  return(
+    0.35*dnorm(x)*dnorm(y,sd=1.5) + 
+    0.65*dnorm(x,mean=2,sd=2)*dnorm(y,mean=3)
+  )
+}
+
+x<-seq(-2.5,6.5,length=100)
+y<-seq(-3,5.5,length=100)
+densSurf<-matrix(nrow=100,ncol=100)
+
+for(i in 1:100){
+  for(j in 1:100){
+    densSurf[i,j]<-dens(x=x[i],y=y[j])
+  }
+}
+
+densSurf2<-expand.grid(x=x,y=y)
+densSurf2$dens<-dens(x=densSurf2$x,y=densSurf2$y)
+```
+
+
+## Covariation figures
+
+* graphics
+
+```{r}
+clrs<-colorRampPalette(c("blue","red","orange","yellow","white"))
+
+image(densSurf,x=x,y=y,col=clrs(200))
+contour(densSurf,x=x,y=y)
+```
+
+
+## Covariation figures
+
+* ggplot2
+
+```{r}
+ggplot(data=densSurf2,mapping=aes(x=x,y=y,z=dens)) +
+  geom_contour()
+```
+
+
+## Covariation figures
+
+**Covariation: 2D density estimation**
+
+Generate some data:
+
+```{r, message=F, warning=F}
+library(MASS) 
+X <- mvrnorm(1000, mu=c(1,3), Sigma=matrix(c(1,0.7,0.7,1), ncol=2))
+```
+
+
+* graphics
+
+```{r}
+z <- kde2d(X[,1], X[,2], n=50)
+plot(X, xlab="y", ylab="x",pch=19,cex=0.75)
+contour(z, drawlabels=FALSE, nlevels=11,col=clrs(14), add=TRUE)
+```
+
+
+## Covariation figures
+
+* ggplot2
+
+```{r}
+X<-data.frame(x=X[,1],y=X[,2])
+
+ggplot(data=X,mapping=aes(x=x,y=y)) +
+  geom_point() +
+  geom_density_2d()
+```
+
+
+# Maps
+
+## Maps
+
+You can plot geographical location data like any other type of data.
+
+$$\,$$
+
+However to load map data, deal with projections of 3-dimensional spherical coordinates onto a 2-dimensional plane and / or plot underlying geographical feature is not trivial and beyond the scope of this workshop (and in general it is highly recommended you attend a GIS training for such applications).
+
+$$\,$$
+
+Talk to us if this is what you need to do as part of your work and we are happy to help.
+
+
+# Multi-panel figures
+
+## Multi-panel figures
+
+Several options:
+
+* graphics
+
+```{r, eval=F}
+  par(mfrow=c(2,3))
+  # followed by commands for individual figures in order
+
+  layout(matrix(nrow=2,col=3,byrow=T,c(1:3,4,5,3)))
+  layout.show(5)
+  # followed by commands for individual figures in order
+  
+  split.screen(c(2,3))
+  # select each panel with screen(i,new=F), then type plotting command for that panel; type close.screen(i) after each figure is done
+```
+
+
+## Multi-panel figures
+
+Example:
+
+```{r, collapse=T}
+par(mfrow=c(2,3))
+
+myPlotFun<-function(lab){
+  plot(0:1,0:1,type="n",axes=F,xlab="",ylab="")
+  polygon(x=c(0,1,1,0),y=c(0,0,1,1),col="darkgrey",border=NA)
+  text(x=0.5,y=0.5,adj=c(0.5,0.5),font=2,cex=3,lab)
+}
+
+for(i in 1:6){
+  myPlotFun(paste("Plot",i))
+}
+```
+
+## Multi-panel figures
+
+* ggplot2
+    + Requires extra package: `library(gridExtra)`
+    + Assign each `ggplot()` call to an object (`p1<-ggplot(...) + ...`)
+    + Produce multipanel figure with `grid.arrange(p1,p2,...,nrow=2)`
+    
+    
+## Multi-panel figures
+
+Example:
+
+```{r}
+myGgplotFun<-function(lab){
+  ggplot(data=data.frame(x=0:1,y=0:1),mapping=aes(x=x,y=y)) +
+  theme(panel.background=element_rect(fill="darkgrey")) +
+  xlab("") + ylab("") + ggtitle(lab)
+}
+
+g1<-myGgplotFun("Plot 1")
+g2<-myGgplotFun("Plot 2")
+g3<-myGgplotFun("Plot 3")
+g4<-myGgplotFun("Plot 4")
+
+grid.arrange(g1,g2,g3,g4,nrow=2)
+```
+
+
+# Saving graphs to files
+
+## Saving graphs to files
+
+In order to write a graph directly to a file, you enclose your plotting code inside a statement that specifies a *graphical device*.
+
+"Graphics device" means a pdf, png, jpg or other file.
+
+Example:
+
+```{r, eval=F}
+pdf(width=16,height=9,file="myfile.pdf") # opens the device; pdf will produce vector graphics
+# plotting code here
+dev.off() # closes the device
+```
+
+Or:
+
+```{r, eval=F}
+png(width=16,height=9,units="in",res=450) # raster graphics
+# plotting code here
+dev.off()
+```
+
+## Saving graphs to files
+
+The container solution given on the previous slide works for both base and `ggplot2` graphics. However for `ggplot2`, you will need to assign the output of `ggplot()` to an object, say `g<-ggplot(...) + ...`, then use `print(g)` between the pdf / png and `dev.off` statements.
+
+$$\,$$
+
+For `ggplot2`, you can also use the function `ggsave`, which will guess the type of graphics device from the file extension you provide:
+
+```{r, eval=F}
+ggsave(g,file="myplot.png")
+```
+
+##
+
+##
+
+$$\,$$
+
+[end of Session 2]
