@@ -1,0 +1,356 @@
+---
+title: "R and statistics course"
+author: "James Chirombo"
+date: "1 December 2020"
+output:
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE, fig.width=16, fig.height=9, dpi=150, highlight=T)
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+```
+
+# Session 4: Hypothesis testing
+
+## Outline
+* Definition
+
+* T tests 
+  + One sample and two sample t test 
+  + Paired t tests
+  + One way analysis of variance (anova)
+
+* Non-parametric tests
+  + Non-parametric equivalent of the above tests
+
+* Tests for proportions
+  + One sample / two sample proportion test
+* Use of p-values in statistics
+
+## Preliminaries
+
+* Read in the data that was previously shared:
+* The data are in CSV format
+
+```{r}
+df1 <- read.csv("datasets/btTBreg.csv",header = TRUE)
+df2 <- read.csv("datasets/adolescent_small.csv",header = TRUE)
+
+```
+
+## Statistical hypothesis
+
+Definition:
+
+* Definition: A supposition, arrived at from observation or reflection, that leads to refutable predictions
+* Any claim cast in a form that will allow it to be tested and refuted
+* A statement that we make about a population parameter that can be tested after drawing a sample.
+ + For example, one can hypothesize that the average age at first marriage among girls in Blantyre rural is 20.
+ + A new mosquito trap is more effective than the standard trap.
+ + This hypothesis has to be tested and conclusion made.
+
+## Steps in hypothesis testing
+
+* Come up with the hypothesis
+* Formulate the hypothesis – both null and alternative
+* Set the decision rule
+* Collect data
+* Calculate the test statistics.
+* Construct rejection regions.
+* Obtain p-value based on a known distribution and make decision.
+* Interpret p-value and make conclusion.
+
+## Statistical hypothesis testing
+
+* Is there a statistically significant “difference”?
+  + OR “effect”, or “association” or “relationship”.
+  + Is the observed difference due to chance?
+
+## When can hypothesis testing be used
+
+Hypothesis testing can be done in different scenarios
+
+* Is there a difference in means
+* Is there a difference in proportions
+* Difference in odds ratios or relative risks
+
+## Null hypothesis
+
+* Definition 1: There is **NO** association between the risk factor and outcome in a population.
+* Definition 2: The hypothesis that the factor of interest is not associated with or not different from another factor or a pre-specified value.
+* Example:
+  + There is no difference in the efficacy of a new drug (Drug A) for malaria prophylaxis in contrast to a currently approved drug (Drug B).
+* Formal basis for testing statistical significance.
+* Start with proposition that there is no difference.
+* Statistical tests can estimate the probability an observed association could be due to chance.
+
+
+## Alternative hypothesis
+
+* Is generally the hypothesis that is believed by the researcher.
+* Is the opposite of the null hypothesis.
+
+## One-sample t test
+
+* This test is used to check whether a sample mean is different from a known/hypothesized mean
+  + How different is the sample mean from the true population mean
+* Continuous data
+
+Assumptions:
+
+* Random sample from the population
+* The data must be continuous
+* Data must follow the normal distribution
+
+## One-sample t test
+
+Suppose we want to test the hypothesis that the mean age is 24
+
+$$H_0: \mu=24$$
+$$H_1: \mu \ne 24$$
+
+* This is a two-sided test.
+
+## Check the assumptions
+
+* Histogram to check normality.
+
+```{r}
+par(cex.axis=2,cex.lab=2,mfrow=c(1,1))
+hist(df1$age, main = "Distribution of age", xlab = "Age", freq = FALSE, col = "#ffa500")
+
+```
+
+## One sample t-test
+
+```{r}
+t.test(df1$age,mu=24)
+```
+
+## One sample t-test - one sided
+
+```{r}
+t.test(df1$age,mu=24,alternative="less")
+```
+
+## Two sample t-test
+
+* The data are continuous
+* The data must follow a normal distribution
+* The two samples are independent
+* Both samples are random samples of the respective underlying population
+* The variances within the two groups are equal (homoscedasticity)
+
+## Two sample t-test
+
+In the dataset provided, it is hypothesized that the mean age is the same for both men and women. 
+
+* We can test this hypothesis 
+
+$$H_0:\mu_1 = \mu_2$$
+
+$$H_1: \mu_1 \ne \mu_2$$
+
+## Assumptions
+
+* Check if the two populations are normally distributed.
+
+```{r}
+par(mfrow=c(1,2), cex.axis=2,cex.lab=2)
+hist(df1$age[df1$sex==1],main="Histogram for Age: Males",xlab = "Age", col = "#0e9ed8")
+hist(df1$age[df1$sex==2],main="Histogram for Age: Females",xlab = "Age", col = "#ff9994")
+
+```
+
+## Assumptions
+
+* Check if the variances are the same
+
+```{r}
+par(cex.axis=2,cex.lab=2)
+boxplot(age ~ sex, data=df1,names=c("Male","Female"), col=c("#0e9ed8","#ff9994")) 
+
+```
+
+
+## Two sample t-test
+
+
+```{r}
+t.test(age~sex,data=df1)
+
+```
+
+## Paired t-test
+
+$$H_0: \mu_1 = \mu_2$$
+
+$$H_1: \mu_1 = \mu_2$$
+
+```{r}
+t.test(df1$cd41,df1$cd42,paired = TRUE)
+
+```
+
+## Comparing means - more than one group
+
+* Sometimes we want to compare means of a variable in more than 2 groups
+* For example, we might want to compare the mean CD4 among the 5 hospitals.
+* Use one way analysis of variance (anova)
+* Based on assumptions:
+  + Data within the groups follows a normal distribution
+  + Equal variation within groups
+  + Independent and identically distributed variables
+
+## One-way anova
+
+A total of 3000 study participants were recruited in 5 hospitals providing ART. Each participant’s CD4 count upon entry into study was measured. We would like to investigate whether there is a difference in mean CD4 count at the entry into the study across the 5 participating facilities. State the hypothesis to be tested and your conclusion.
+
+## One-way anova 
+
+$$H_0: \mu_1=\mu_2=\mu_3=\mu_4=\mu_5$$
+ $$H_1: \mu_i \neq \mu_j$$
+ 
+```{r}
+
+oneway.test(cd41 ~ hosp, data = df1)
+
+```
+ 
+## One-way anova
+
+```{r}
+res.hosp <- aov(cd41 ~ factor(hosp), data = df1)
+summary(res.hosp)
+```
+
+## Tests for proportions – one sample test
+
+A recent survey found that approximately 23% of the population in a district are HIV positive. A researcher thinks that the current proportion of the adult population that is HIV+ is greater than 23%. The researcher takes a random sample of 3000 and finds that 560 tested positive. State the hypotheses and your conclusion
+
+## Tests for proportions – one sample test
+
+A recent survey found that approximately 23% of the population in a district are HIV positive. A researcher thinks that the current proportion of the adult population that is HIV+ is greater than 23%. The researcher takes a random sample of 3000 and finds that 560 tested positive. State the hypotheses and your conclusion
+
+$$H_0: p \le 0.23$$
+$$H_1: p >0.23$$
+
+## Tests for proportions – one sample test
+
+```{r}
+prop.test(560,3000,0.23,alternative = "greater")
+
+```
+
+## Test of proportion – Two sample tests
+
+Example: We would like to investigate whether there is enough evidence that the proportion of HIV cases is different between men 
+
+$$H_0: p_1=p_2$$
+$$H_1:p_1 \neq p_2$$
+
+* We need to calculate the proportions in each group before doing the test.
+* Proportion of men that tested positive; $p_1=n_1/N_1$
+* Proportion of women that tested positive; $p_2=n_2/N_2$
+
+## Test of proportion – Two sample tests
+
+```{r}
+table(df1$sex,df1$hiv)
+prop.test(c(262,298),c(1466,1534))
+
+```
+
+## Non-parametric tests
+
+* When assumption of normality are violated.
+* Have non-parametric equivalent for the parametric tests
+
+## Non-parametric tests: Comparison of means
+
+Example: 
+
+* We will use the adolescent data in this example. We can check the distribution of the variable for weight 
+
+```{r}
+par(cex.lab=2,cex.axis=2)
+qqnorm(df2$a104wt)
+qqline(df2$a104wt,col="blue")
+```
+
+## Non-parametric one sample test
+
+* When assumption of normality are violated.
+* Have non-parametric equivalent for the parametric tests.
+  + One sample non-parametric test.
+* Suppose we want to test that the mean weight is 50kg.
+ 
+```{r}
+wilcox.test(df2$a104wt,mu=50) 
+
+```
+
+
+## Non-parametric two sample test
+
+Example:
+
+* Let's test the hypothesis that the weight is different between males and females
+
+```{r}
+
+wilcox.test(a104wt ~ a13sex,data = df2)
+
+```
+
+## Non-parametric – paired test
+
+Example:
+ 
+* Test the hypothesis that the CD4 counts are the same at the two time points
+
+```{r}
+wilcox.test(df1$cd41.sk,df1$cd42.sk,paired = TRUE)
+
+```
+
+
+## Non-parametric tests – more than 3 groups
+
+* Analogous to one way anova
+* Example: It is claimed that differences exist in the mean weight between the different conditions (excellent, fair, good and poor)
+
+```{r}
+kruskal.test(a104wt ~ a63well,data = df2)
+```
+
+## ASA statement on statistical signigicance and p-values 
+
+* P-values indicate degree to which data are incompatible with a given statistical model.
+* P-values do not measure the probability of H0 being true.
+* Decision-making should not be based solely on whether a p-value is below a certain threshold.
+* Proper inference requires full reporting and transparency.
+* A p-value does not measure the size of an effect / importance of a result.
+Context matters: a p-value by itself does not provide a good measure of evidence regarding a model or hypothesis.
+
+
+## Note on p-values
+
+* Stop the use of P-values in the conventional, dichotomous way.
+  + P-values alone should not be used to refute or support a scientific hypothesis.
+  + Rebrand confidence intervals to “compatibility intervals”. 
+  + Discuss all values that fall within the confidence interval / are compatible with the data.
+  + Do acknowledge that the point estimates and values close to it are more compatible than values at the extremes of the interval.
+  + Emphasize / embrace uncertainty.
+
+
+
+
+
+
+
