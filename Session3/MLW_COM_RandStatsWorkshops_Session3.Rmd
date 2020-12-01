@@ -1,0 +1,1862 @@
+---
+title: "R and statistics course"
+author: "Augustine Choko, James Chirombo & Marc Henrion"
+date: "01 December 2020"
+output: 
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,collapse=T,fig.width=16, fig.height=9, dpi=150, highlight=T)
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+```
+
+# Session 3: Probability distributions and study designs
+
+## Preliminaries
+
+* Certificates of attendance
+  + You need to attend the first 7 sessions.
+  + Sign in & check spelling of name on the sign-in sheet!
+  + Only issued if paid-up and in exchange for completed feedback form.
+
+$$\,$$ 
+
+* Participant packs (copy of slides, R code etc.)
+  + [https://github.com/mlw-stats/R_And_Statistics_Training_2020](https://github.com/mlw-stats/R_And_Statistics_Training_2020)
+  
+$$\,$$ 
+  
+* Housekeeping
+  + Covid-19 measures
+  + Refreshments
+  + Fire exits
+  + Bathrooms
+  + RStudio Cloud
+  
+  
+## Preliminaries
+
+$$\,$$
+
+* MS Teams: session is recorded and available for streaming after the session.
+
+* Alas this seems to be only available to MLW staff (limitation of MS Teams / Streams).
+
+
+# Probability theory
+
+
+##
+
+$$\,$$
+
+**Quantifying uncertainty**
+
+
+## Statistics & uncertainty
+
+Flip a (balanced) coin: the probability of H or T is exactly 0.5.
+
+Flip the coin 10 times:
+
+* you would expect 5 H and 5 T
+* yet sometimes you will see 3 H, sometimes 6 H, sometimes 5 H, ...
+* there is inherent **uncertainty** in the experiment
+
+$$\,$$
+
+```{r}
+H<-rbinom(5,size=10,prob=0.5)
+print(H)
+```
+
+
+## Statistics & uncertainty
+
+Suppose weight was a deterministic function of a toddler's age: you start off at 3.5kg, and then your weight follows a logarithmic curve until age 24 months at which point you reach 11.5kg.
+
+This is obviously not what happens in real life (though an OK approximation for US girls).
+
+```{r}
+ageMonths<-runif(100,min=0,max=24) # sample some random ages
+weight<-3.5+2.5*log(ageMonths+1) # compute the weights
+dat<-tibble(ageMonths,weight)
+
+dat %>%
+  ggplot(mapping=aes(x=ageMonths,y=weight)) +
+    geom_point(color="steelblue") +
+    xlab("age in months") + ylab("weight in kg") +
+    ggtitle("Toddlers' weights versus ages") +
+    theme(text = element_text(size=20))
+```
+
+## Statistics & uncertainty
+
+Now suppose when we measure a toddler's weight, the accuracy of our measurement is not perfect: each time we record a slightly different value than the true one, though on average we get it right.
+
+```{r}
+dat<-mutate(dat,weightWithError=rnorm(nrow(dat),mean=weight,sd=0.25))
+
+dat %>%
+  ggplot(mapping=aes(x=ageMonths,y=weightWithError)) +
+    geom_point(color="steelblue") +
+    xlab("age in months") + ylab("weight in kg") + 
+    ggtitle("Toddlers' weights versus ages") +
+    theme(text = element_text(size=20))
+```
+
+
+## Statistics & uncertainty
+
+Now suppose we can measure weights perfectly again. But now suppose that there are unobserved characteristics (e.g. genetic factors, nutritional status, ...) that impact on children's weights.
+
+
+```{r}
+dat<-dat %>% 
+  mutate(latentFactor1=rnorm(nrow(dat),mean=0,sd=0.5)) %>%
+  mutate(latentFactor2=rnorm(nrow(dat),mean=0,sd=0.1)) %>%
+  mutate(weightGivenLatentFactors=3.5+latentFactor1+(2.5+latentFactor2)*log(ageMonths+1))
+
+dat %>%
+  ggplot(mapping=aes(x=ageMonths,y=weightGivenLatentFactors)) +
+    geom_point(color="steelblue") +
+    xlab("age in months") + ylab("weight in kg") +
+    ggtitle("Toddlers' weights versus ages") +
+    theme(text = element_text(size=20))
+```
+
+## Statistics & uncertainty
+
+We have seen 3 sources of uncertainty:
+
+* inherent uncertainty / randomness of an experiment
+* measurement error
+* unobserved relevant variables
+
+$$ \, $$ 
+
+These are just a few of many sources of uncertainty.
+
+
+##
+
+$$\,$$
+
+**Probability theory**
+
+
+## Statistics & uncertainty
+
+##### PROBABILITY
+To quantify uncertainty we need to use the tools of **probability theory**.
+
+##### STATISTICS
+To gain insights from observational data we need to make **statistical inference**.
+
+
+## Probability theory: random experiments
+
+A **random experiment** is an experiment that satisfies the following conditions:
+
+1. \ All possible outcomes are known in advance.
+2. \ In any particular trial, the outcome is not known in advance.
+3. \ The experiment can be repeated under identical conditions.
+
+The **outcome space** $\Omega$ of an experiment is the set of all possible outcomes of the experiment.
+
+Examples
+
+* In the coin tossing experiment earlier $\Omega=\{H,T\}$. 
+* When you roll a die $\Omega=\{1,2,3,4,5,6\}$.
+
+## Probability theory: random experiments
+
+An **event** is a subset of the outcome space.
+
+Examples
+
+* "Coin lands head": $A = \{x\in\Omega | \,x\mbox{ is heads}\} = \{H\}$
+* "Die shows even number": $B = \{x\in\Omega | \,x\mbox{ is even}\} = \{2,4,6\}$
+
+Special events
+
+* Impossible / empty event: $A = \emptyset$ 
+* Sure event / outcome space: $A = \Omega$
+* Singleton events: $A = \{H\}$, $A = \{3\}$
+* The complementary event: $\bar{A}=\Omega\setminus A$
+
+
+## Probability theory: probability
+
+Classical definition of probability:
+
+Let $|.|$ denote the operator measuring the size of an event. The **probability** of an event $A\subseteq\Omega$ is defined as
+$$P(A)=\frac{|A|}{|\Omega|}$$
+
+If all outcomes in $\Omega$ are equally likely, then this means the probability of $A$ is the ratio of the number of outcomes in $A$ and the number of outcomes in $\Omega$.
+
+If your outcome space is not discrete, then $|.|$ is a function mapping outcome sets to the positive real line.
+
+
+## Probability theory: probability
+
+Probability as a mathematical concept was formally introduced in the 17^th^ century by French mathematicians **Blaise Pascal** and **Pierre de Fermat** when they were discussing games of chance.
+
+$$ \, $$ 
+
+Note: also a frequency and a subjective definition of probability.
+
+$$ \, $$ 
+
+The formal, mathematical derivation of probability theory follows from set theory and measure theory.
+
+
+## Probability theory: probability
+
+:::::: {.columns}
+::: {.column width="50%"}
+![Blaise Pascal (public domain / Wikipedia)](images/pascal.jpg)
+:::
+
+::: {.column width="50%"}
+![Pierre de Fermat (public domain / Wikipedia)](images/fermat.jpg)
+:::
+::::::
+
+
+##
+
+$$\,$$
+
+**Random variables**
+
+
+## Random variables
+
+A **random variable** $X$ is a function that maps the outcome space $\Omega$ to the real line (i.e. a number):
+$$X:\Omega\rightarrow \mathbb{R}$$
+$$ \, $$
+
+Example:
+Consider the experiment of tossing a coin 2 times:
+$$\Omega=\{(H,H),(H,T),(T,H),(T,T)\}$$
+The number of heads turning up is a random variable $X$:
+
+$$X((H,H))=2$$
+$$X((H,T))=1$$
+$$X((T,H))=1$$
+$$X((T,T))=0$$
+
+
+## Random variables: probability distribution
+
+A **probability mass function** (pmf) $p$ assigns to each realisation $x$ of a *discrete* random variable X the probability $P(X=x)=p(x)$.
+
+
+```{r}
+df<-tibble(x=0:10,pmf=dbinom(0:10,size=10,prob=0.5))
+
+ggplot(data=df,mapping=aes(x=x,y=pmf)) +
+  geom_bar(stat="identity") +
+  xlab("number of heads") + ylab("probability mass") +
+  ggtitle("pmf of the random variable counting numbers of H in 10 coin tosses") +
+  scale_x_continuous(breaks=0:10) +
+  coord_cartesian(xlim=c(0,10)) +
+  theme(text = element_text(size=20))
+```
+
+## Random variables: probability distribution
+
+$$\,$$
+What about continuous random variables?
+$$\,$$
+For a continuous random variable $X$, $P(X=x)=0$ for all values of x (the probability of *exactly* realising one value among an infinity of possible values is 0). Hence it makes little sense to define a pmf.
+
+## Random variables: probability distribution
+
+Instead, we will define probabilities as areas under a curve. A **probability density function** (pdf) of a random variable $X$ is a function, the area under which defines the probability of $X$ taking a value within a specific range of values.
+
+
+Mathematically:
+
+$$\,$$
+
+$$P(a<X\leq b)=\int_a^bp(x)dx$$
+
+
+## Random variables: probability distribution
+
+$$\,$$
+
+```{r}
+x<-seq(-4,4,by=0.01)
+xArea <- seq(-2,0.5,by=0.01)
+yArea <- dnorm(xArea)
+
+par(mar=c(5,5,5,1))
+plot(x, dnorm(x), main="pdf of the standard normal", xlab="x", ylab="density", type="l", cex.lab=2.5,cex.axis=2.5,cex.main=2.5) 
+polygon(c(-2,xArea,0.5),c(0,yArea,0),col='steelblue',lty=0)
+text(cex=2.5,"P(-2<X<0.5)=0.67",x=-2.5,y=0.25,col="steelblue")
+```
+
+
+## Random variables: expectation & variance
+
+What is the expected or average / mean value for a given distribution? Let us define the **expectation** or the **mean** of a random value.
+
+Discrete random variables:
+$$E(X)=\sum_{x}{x\,p(x)}$$
+Continuous random variables:
+$$E(X)=\int_{-\infty}^{\infty}{x\,p(x)\,dx}$$
+Notation:
+$$\mu=E(X)$$
+
+## Random variables: expectation & variance
+
+The **variance** $Var(X)=\sigma^2$ of a random variable $X$ is defined as spread around the mean and obtained by averaging the squared differences $(x-\mu)^2$.
+$$
+\begin{align}
+\sigma^2 &=& E[(X-\mu)^2] \\
+         &=& E[(X-E(X))^2]
+\end{align}
+$$
+The **standard deviation** $\sigma$ has the advantage of being on the same scale as $X$.
+
+##
+
+$$\,$$
+
+**Common distributions**
+
+## Common distributions: discrete uniform
+
+$X\sim\mbox{ Unif}(k,n)$ if
+
+$$
+P(X=x)=\begin{cases}
+1/k &\mbox{ if }x\in\{a,a+1,\ldots,a+k-1\} \\
+0 &\mbox{ otherwise}
+\end{cases}
+$$
+$$\,$$
+
+$$E(X)=a+\frac{k-1}{2}, \, Var(X)=\frac{k^2-1}{12}$$
+$$\,$$
+
+This distribution occurs when there are k equally likely outcomes, each of which occurs with probability $1/k$.
+
+Example:
+
+Roll a die
+
+## Common distributions: discrete uniform
+
+```{r}
+plotDUnif<-function(k,col,maxK=10){
+  x<-seq(1,k,by=1)
+  px<-rep(1/k,k)
+  df<-tibble(x=x,px=px)
+  
+  g<-ggplot(data=df,mapping=aes(x=x,y=px)) +
+    geom_bar(stat="identity",fill=col) +
+    ylab("P(X=x)") + theme(text = element_text(size=20)) +
+    ggtitle(paste(sep="","Discrete uniform with a=1, k=",k)) +
+    scale_x_continuous(breaks=1:maxK) +
+    coord_cartesian(xlim=c(0.5,maxK+0.5),ylim=c(0,1))
+  return(g)
+}
+  
+g1<-plotDUnif(1,"darkgrey"); g2<-plotDUnif(2,"steelblue")
+g3<-plotDUnif(5,"salmon"); g4<-plotDUnif(10,"orange")
+grid.arrange(g1,g2,g3,g4)
+```
+
+
+## Common distributions: Bernoulli
+
+$X\sim\mbox{ Bern}(p)$ if
+
+$$
+P(X=x)=\begin{cases}
+p &\mbox{ if }x=1 \\
+1-p &\mbox{ if }x=0 \\
+0 &\mbox{ otherwise}
+\end{cases}
+$$
+$$\,$$
+
+$$E(X)=p,\, Var(X)=p(1-p)$$
+$$\,$$
+
+This distribution occurs when there are only 2 outcomes, one of which occurs with probability $p$.
+
+Example:
+
+Coin tossing experiment
+
+
+## Common distributions: Bernoulli
+
+```{r}
+plotBern<-function(p,col){
+  x<-seq(0,1,by=1)
+  px<-dbinom(x,size=1,prob=p)
+  df<-tibble(x=x,px=px)
+  
+  g<-ggplot(data=df,mapping=aes(x=x,y=px)) +
+    geom_bar(stat="identity",fill=col) +
+    ylab("P(X=x)") + theme(text = element_text(size=20)) +
+    ggtitle(paste(sep="","Bernoulli with p=",p)) +
+    scale_x_continuous(breaks=0:1) +
+    coord_cartesian(xlim=c(-0.5,1.5),ylim=c(0,1))
+  return(g)
+}
+  
+g1<-plotBern(0,"darkgrey"); g2<-plotBern(0.25,"steelblue")
+g3<-plotBern(0.5,"salmon"); g4<-plotBern(0.9,"orange")
+grid.arrange(g1,g2,g3,g4)
+```
+
+
+## Common distributions: Bernoulli
+
+![Jacob Bernoulli (public domain / Wikipedia)](images/bernoulli.jpg)
+
+## Common distributions: Binomial
+
+$X\sim\mbox{ Bin}(n,p)$ if
+
+$$
+P(X=x)=\begin{cases}
+\binom{n}{x}\,p^x\,(1-p)^{n-x} &\mbox{ if }x\in\{0,1,\ldots,n\} \\
+0                              &\mbox{ otherwise}
+\end{cases}
+$$
+
+$$\,$$
+
+$$E(X)=np,\, Var(X)=np(1-p)$$
+
+The special case $n=1$ is the Bernoulli distribution. Also if $X_1,X_2,\ldots,X_n$ are independent and identically distributed (iid) with $X_i\sim\mbox{ Bern(p)}$, then $Y=\sum_{i=1}^n{X_i} \sim\mbox{ Bin}(n,p)$.
+
+It is the distribution that arises if you count the number of successes among $n$ independent Bernoulli trials, e.g. counting heads in 10 coin tosses.
+
+
+## Common distributions: Binomial
+
+In R:
+
+$$\,$$
+
+* `rbinom(n,size,prob)` - to sample from this distribution
+
+* `dbinom(x,size,prob)` - for the probability mass/density function
+
+* `pbinom(x,size,prob)` - for the cumulative distribution function
+
+* `qbinom(p,size,prob)` - to calculate theoretical quantiles
+
+
+## Common distributions: Binomial
+
+```{r}
+plotBin<-function(n,p,col,maxN=10){
+  x<-seq(0,n,by=1)
+  px<-dbinom(x,size=n,prob=p)
+  df<-tibble(x=x,px=px)
+  
+  g<-ggplot(data=df,mapping=aes(x=x,y=px)) +
+    geom_bar(stat="identity",fill=col) +
+    ylab("P(X=x)") + theme(text = element_text(size=20)) +
+    ggtitle(paste(sep="","Binomial with n=",n,", p=",p)) +
+    scale_x_continuous(breaks=0:maxN) +
+    coord_cartesian(xlim=c(-0.5,maxN+0.5),ylim=c(0,1))
+  return(g)
+}
+  
+g1<-plotBin(1,.2,"darkgrey"); g2<-plotBin(2,.2,"steelblue")
+g3<-plotBin(3,.2,"salmon"); g4<-plotBin(4,.2,"greenyellow")
+g5<-plotBin(5,.2,"mediumorchid"); g6<-plotBin(10,.2,"orange")
+grid.arrange(g1,g2,g3,g4,g5,g6,ncol=3)
+```
+
+
+## Common distributions: Multinomial
+
+$$\,$$
+You can generalise the binomial to events with more than 2 outcomes.
+
+$$\,$$
+This yields the multinomial distribution.
+
+
+## Common distributions: Poisson
+
+$X\sim\mbox{ Poisson}(\lambda)$ if
+
+$$
+P(X=x)=\begin{cases}
+\frac{\lambda^xe^{-\lambda}}{x!} &\mbox{ if }x\in\{0,1,2,3\ldots\} \\
+0                              &\mbox{ otherwise}
+\end{cases}
+$$
+$$\,$$
+
+$$E(X)=\lambda,\, Var(X)=\lambda$$
+
+This distribution arises if you count the number of events that occur during a fixed interval, with $\lambda$ the rate with which events occur.
+
+The Poisson distribution is a limiting case of the Binomial:
+
+Let $X_n\sim\mbox{ Bin}(n,p)$ and $Y=\mbox{lim}_{n\rightarrow\infty,p\rightarrow 0}X_n$.
+
+If $np$ is kept fixed, then $Y\sim\mbox{ Poisson}(\lambda)$ with rate $\lambda=np$.
+
+
+## Common distributions: Poisson
+
+Examples:
+
+$$\,$$
+
+* number of mutations on strand of DNA per unit time,
+* number of asthma patient arrivals within a given hour of a walk-in clinic
+* number of births, deaths, ..., over a given period
+* number of photons hitting a telescope image sensor
+* ...
+
+
+## Common distributions: Poisson
+
+In R:
+
+$$\,$$
+
+* `rpois(n,lambda)` - to sample from this distribution
+
+* `dpois(x,lambda)` - for the probability mass/density function
+
+* `ppois(x,lambda)` - for the cumulative distribution function
+
+* `qpois(p,lambda)` - to calculate theoretical quantiles
+
+
+## Common distributions: Poisson
+
+![Sim?on Denis Poisson (public domain / Wikipedia)](images/poisson.jpg)
+
+
+```{r}
+plotPois<-function(lambda,col,maxK=10){
+  x<-seq(0,maxK,by=1)
+  px<-dpois(x,lambda=lambda)
+  df<-tibble(x=x,px=px)
+  
+  g<-ggplot(data=df,mapping=aes(x=x,y=px)) +
+    geom_bar(stat="identity",fill=col) +
+    ylab("P(X=x)") + theme(text = element_text(size=20)) +
+    ggtitle(paste(sep="","Poisson with rate=",lambda)) +
+    scale_x_continuous(breaks=0:maxK) +
+    coord_cartesian(xlim=c(-0.5,maxK+0.5),ylim=c(0,1))
+  return(g)
+}
+  
+g1<-plotPois(0,"darkgrey"); g2<-plotPois(0.5,"steelblue")
+g3<-plotPois(1,"salmon"); g4<-plotPois(2,"greenyellow")
+g5<-plotPois(3,"mediumorchid"); g6<-plotPois(5,"orange")
+grid.arrange(g1,g2,g3,g4,g5,g6,ncol=3)
+```
+
+
+## Common distributions: Negative binomial
+
+$X\sim\mbox{ NB}(k,p)$ if
+
+$$
+P(X=x)=\begin{cases}
+\binom{x+k-1}{x}\,p^k\,(1-p)^x &\mbox{ if }x\in\{0,1,2,3\ldots\} \\
+0                              &\mbox{ otherwise}
+\end{cases}
+$$
+$$\,$$
+
+$$E(X)=\frac{k(1-p)}{p},\, Var(X)=\frac{k(1-p)}{p^2}$$
+
+This distribution arises if you count the number of failures in a sequence of identical and independent Bernoulli trials, each with probability of success $p$, until $k$ successes have been reached.
+
+This is the parameterisation R is using.
+
+
+## Common distributions: Negative binomial
+
+There are many alternative formulations / parameterisations for the Negative Binomial, so always check you know what the parameters mean (e.g. count the number of successes until a fixed number of failures have been reached).
+
+Like the Poisson distribution, the negative binomial distribution is used in count data models. Unlike the Poisson it has 2 parameters, so is particularly useful when your counts show signs of overdispersion (i.e. larger variance than mean).
+
+The negative binomial can be derived as a Gamma-Poisson mixture: Poisson distribution with variable rate parameter having a Gamma distribution.
+
+
+## Common distributions: Negative binomial
+
+Example:
+
+$$\,$$
+
+* number of co-localised distant fragments in a genomic conformation capture experiment
+* read counts per transcript in NGS transcriptomic data
+* number of larvae in a field
+* ...
+
+## Common distributions: NEgative binomial
+
+In R:
+
+$$\,$$
+
+* `rnbinom(n,size,prob)` - to sample from this distribution
+
+* `dnbinom(x,size,prob)` - for the probability mass/density function
+
+* `pnbinom(x,size,prob)` - for the cumulative distribution function
+
+* `qnbinom(p,size,prob)` - to calculate theoretical quantiles
+
+
+## Common distributions: Negative binomial
+
+```{r, fig.width=22}
+plotNB<-function(k,p,col,maxK=25){
+  x<-seq(0,maxK,by=1)
+  px<-dnbinom(x,size=k,prob=p)
+  df<-tibble(x=x,px=px)
+  
+  g<-ggplot(data=df,mapping=aes(x=x,y=px)) +
+    geom_bar(stat="identity",fill=col) +
+    ylab("P(X=x)") + theme(text = element_text(size=20)) +
+    ggtitle(paste(sep="","Neg. binomial with k=",k,", p=",p)) +
+    scale_x_continuous(breaks=0:maxK) +
+    coord_cartesian(xlim=c(-0.5,maxK+0.5),ylim=c(0,1))
+  return(g)
+}
+  
+g1<-plotNB(0,0.25,"darkgrey"); g2<-plotNB(1,0.25,"steelblue")
+g3<-plotNB(3,0.25,"salmon"); g4<-plotNB(0,0.6,"greenyellow")
+g5<-plotNB(1,0.6,"mediumorchid"); g6<-plotNB(3,0.6,"orange")
+grid.arrange(g1,g2,g3,g4,g5,g6,ncol=3)
+```
+
+
+## Common distributions: (Continuous) uniform
+
+$X\sim\mbox{ Unif}(a,b)$ if
+
+$$
+p(x)=\begin{cases}
+\frac{1}{b-a} &\mbox{ if }x\in[a,b] \\
+0             &\mbox{ otherwise}
+\end{cases}
+$$
+
+$$\,$$
+
+$$E(X)=\frac{b-a}{2},\, Var(X)=\frac{(b-a)^2}{12}$$
+
+This is the analogue, in the continuous case, of the discrete uniform.
+
+For $a=0,\, b=1$ the distribution is often called the standard uniform. This is very important in sampling theory and algorithms.
+
+
+## Common distributions: (Continuous) uniform
+
+Any continuous distribution can be transformed to a uniform distribution by taking $F(X)=P(X\leq x)$, the cumulative distribution function. $F(X)$ has a standard uniform distribution, whatever the distribution of $X$. this is important for copulas - a general technique for modelling joint distributions.
+
+Example:
+
+Take any statistical test involving a continuous distribution. If the null hypothesis is true, then the p-values of the test are standard uniformly distributed.
+
+
+## Common distributions: (Continuous) uniform
+
+In R:
+
+$$\,$$
+
+* `runif(n,min,max)` - to sample from this distribution
+
+* `dunif(x,min,max)` - for the probability mass/density function
+
+* `punif(x,min,max)` - for the cumulative distribution function
+
+* `qunif(p,min,max)` - to calculate theoretical quantiles
+
+
+## Common distributions: (Continuous) uniform
+
+```{r, fig.width=22}
+plotUnif<-function(a,b,col,plotRange=c(-1,6)){
+  x<-seq(plotRange[1],plotRange[2],length=1000)
+  px<-dunif(x,min=a,max=b)
+  df<-tibble(x=x,px=px)
+  
+  g<-ggplot(data=df,mapping=aes(x=x,y=px)) +
+    geom_line(colour=col,lwd=1.5) +
+    geom_area(fill=col,alpha=0.25) +
+    ylab("p(x)") + theme(text = element_text(size=20)) +
+    ggtitle(paste(sep="","Uniform with a=",a,", b=",b)) +
+    coord_cartesian(xlim=plotRange,ylim=c(0,2))
+  return(g)
+}
+  
+g1<-plotUnif(0,0.5,"darkgrey"); g2<-plotUnif(0,1,"steelblue")
+g3<-plotUnif(0,2,"salmon"); g4<-plotUnif(1,5,"orange")
+grid.arrange(g1,g2,g3,g4,ncol=2)
+```
+
+
+## Common distributions: Exponential
+
+$X\sim\mbox{ Exp}(\lambda)$ if
+
+$$
+p(x)=\begin{cases}
+\lambda e^{-\lambda x}&\mbox{ if }x>0 \\
+0             &\mbox{ otherwise}
+\end{cases}
+$$
+
+$$\,$$
+
+$$E(X)=\frac{1}{\lambda},\, Var(X)=\frac{1}{\lambda^2}$$
+
+The exponential distribution describes the waiting time between consecutive events in a Poisson process.
+
+An important property of the exponential distribution is that it is *memoryless*: $P(X>x+y|X>y)=P(X>x)$.
+
+
+## Common distributions: Exponential
+
+In R:
+
+$$\,$$
+
+* `rexp(n,rate)` - to sample from this distribution
+
+* `dexp(x,rate)` - for the probability mass/density function
+
+* `pexp(x,rate)` - for the cumulative distribution function
+
+* `qexp(p,rate)` - to calculate theoretical quantiles
+
+
+## Common distributions: Exponential
+
+```{r, warning=F}
+l<-1000; x<-seq(0,10,length=l)
+p1x<-dexp(x,rate=0.25); p2x<-dexp(x,rate=0.5)
+p3x<-dexp(x,rate=1); p4x<-dexp(x,rate=2)
+xFull<-rep(x,4); pFull<-c(p1x,p2x,p3x,p4x)
+pars<-factor(c(rep(1,l),rep(2,l),rep(3,l),rep(4,l)))
+df<-tibble(x=xFull,p=pFull,pars=pars)
+
+cols<-c("darkgrey", "steelblue", "salmon", "orange")
+labs<-paste(sep="","k=",c(0.25,0.5,1,2))
+
+ggplot(data=df,mapping=aes(x=x,y=p,colour=pars,fill=pars)) +
+  geom_line(lwd=1,alpha=0.75) +
+  geom_area(alpha=0.1,position="dodge") +
+  scale_color_manual(values=cols) +
+  scale_fill_manual(values=cols,labels=labs) +
+  labs(fill="parameters") + guides(colour=F) +
+  ylab("density") + ggtitle("Exponential distributions") + 
+  theme(text = element_text(size=20)) 
+```
+
+
+## Common distributions: Gamma
+
+$X\sim\Gamma(\alpha,\beta)$ if
+
+$$
+p(x)=\begin{cases}
+\frac{\beta^\alpha x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}     &\mbox{ if }x>0 \\
+0             &\mbox{ otherwise}
+\end{cases}
+$$
+
+where $\Gamma(\alpha)=\int_0^{\infty}z^{\alpha-1}e^{-z}dz$ is the gamma function.
+
+$$\,$$
+
+$$E(X)=\frac{\alpha}{\beta},\, Var(X)=\frac{\alpha}{\beta^2}$$
+
+
+## Common distributions: Gamma
+
+The exponential distribution arises as a sum of independent exponentially distributed random variables.
+
+It is an important conjugate prior distribution in Bayesian statistics.
+
+$$\,$$
+
+Example:
+
+Inter-spike intervals in neuroscience.
+
+
+## Common distributions: Gamma
+
+In R:
+
+$$\,$$
+
+* `rgamma(n,shape,rate)` - to sample from this distribution
+
+* `dgamma(x,shape,rate)` - for the probability mass/density function
+
+* `pgamma(x,shape,rate)` - for the cumulative distribution function
+
+* `qgamma(p,shape,rate)` - to calculate theoretical quantiles
+
+## Common distributions: Gamma
+
+```{r}
+
+l<-1000; x<-seq(0,20,length=l)
+p1x<-dgamma(x,shape=1,rate=0.5); p2x<-dgamma(x,shape=1,rate=2)
+p3x<-dgamma(x,shape=0.5,rate=1); p4x<-dgamma(x,shape=2,rate=1)
+p5x<-dgamma(x,shape=4,rate=1); p6x<-dgamma(x,shape=8,rate=1)
+xFull<-rep(x,6); pFull<-c(p1x,p2x,p3x,p4x,p5x,p6x)
+pars<-factor(c(rep(1,l),rep(2,l),rep(3,l),rep(4,l),rep(5,l),rep(6,l)))
+df<-tibble(x=xFull,p=pFull,pars=pars)
+
+cols<-c("darkgrey", "steelblue", "salmon", "orange", "greenyellow", "mediumorchid")
+labs<-c(expression(paste(sep="",alpha,"=1, ",beta,"=0.5")),
+        expression(paste(sep="",alpha,"=1, ",beta,"=2")),
+        expression(paste(sep="",alpha,"=0.5, ",beta,"=0.5")),
+        expression(paste(sep="",alpha,"=2, ",beta,"=1")),
+        expression(paste(sep="",alpha,"=4, ",beta,"=1")),
+        expression(paste(sep="",alpha,"=8, ",beta,"=1")))
+```
+
+
+## Common distributions: Gamma
+
+```{r, warning=F}
+ggplot(data=df,mapping=aes(x=x,y=p,colour=pars,fill=pars)) +
+  geom_line(lwd=1,alpha=0.75) +
+  geom_area(alpha=0.1,position="dodge") +
+  scale_color_manual(values=cols) +
+  scale_fill_manual(values=cols,labels=labs) +
+  labs(fill="parameters") + guides(colour=F) +
+  ylab("density") + ggtitle("Gamma distribution") + 
+  theme(text = element_text(size=20)) +
+  coord_cartesian(ylim=c(0,1.5))
+```
+
+
+## Common distributions: Beta
+
+$X\sim\beta(\alpha,\beta)$ if
+
+$$
+p(x)=\begin{cases}
+\frac{x^{\alpha-1}(1-x)^{\beta-1}}{B(\alpha,\beta)}     &\mbox{ if }x\in[0,1] \\
+0             &\mbox{ otherwise}
+\end{cases}
+$$
+
+where $B(\alpha,\beta)=\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}$
+
+$$\,$$
+
+$$E(X)=\frac{\alpha}{\alpha+\beta},\, Var(X)=\frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$$
+
+
+## Common distributions: Beta
+
+A flexible distribution useful to model continuous variables with support on an interval of finite length.
+
+$$\,$$
+
+An important conjugate prior distribution in Bayesian statistics for a number of distributions involving probability parameters.
+
+
+## Common distributions: Beta
+
+In R:
+
+$$\,$$
+
+* `rbeta(n,shape1,shape2)` - to sample from this distribution
+
+* `dbeta(x,shape1,shape2)` - for the probability mass/density function
+
+* `pbeta(x,shape1,shape2)` - for the cumulative distribution function
+
+* `qbeta(p,shape1,shape2)` - to calculate theoretical quantiles
+
+
+## Common distributions: Beta
+
+```{r}
+l<-1000; x<-seq(0,1,length=l)
+p1x<-dbeta(x,shape1=0.5,shape2=0.5); p2x<-dbeta(x,shape1=1,shape2=1)
+p3x<-dbeta(x,shape1=2,shape2=2); p4x<-dbeta(x,shape1=1,shape2=3)
+p5x<-dbeta(x,shape1=2,shape2=5); p6x<-dbeta(x,shape1=5,shape2=1)
+xFull<-rep(x,6); pFull<-c(p1x,p2x,p3x,p4x,p5x,p6x)
+pars<-factor(c(rep(1,l),rep(2,l),rep(3,l),rep(4,l),rep(5,l),rep(6,l)))
+df<-tibble(x=xFull,p=pFull,pars=pars)
+
+cols<-c("darkgrey", "steelblue", "salmon", "orange", "greenyellow", "mediumorchid")
+labs<-c(expression(paste(sep="",alpha,"=0.5, ",beta,"=0.5")),
+        expression(paste(sep="",alpha,"=1, ",beta,"=1")),
+        expression(paste(sep="",alpha,"=2, ",beta,"=2")),
+        expression(paste(sep="",alpha,"=1, ",beta,"=3")),
+	expression(paste(sep="",alpha,"=2, ",beta,"=5")),
+	expression(paste(sep="",alpha,"=5, ",beta,"=1")))
+```
+
+
+## Common distributions: Beta
+
+```{r, warning=F}
+ggplot(data=df,mapping=aes(x=x,y=p,colour=pars,fill=pars)) +
+  geom_line(lwd=1,alpha=0.75) +
+  geom_area(alpha=0.1,position="dodge") +
+  scale_color_manual(values=cols) +
+  scale_fill_manual(values=cols,labels=labs) +
+  labs(fill="parameters") + guides(colour=F) +
+  ylab("density") + ggtitle("Beta distribution") + 
+  theme(text = element_text(size=20)) +
+  coord_cartesian(ylim=c(0,3))
+
+```
+
+## Common distributions: Normal / Gaussian
+
+$X\sim\mathcal{N}(\mu,\sigma^2)$ if
+
+$$
+p(x)=\frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{(x-\mu)^2}{2\sigma^2}}
+$$
+
+$$\,$$
+
+$$E(X)=\mu,\, Var(X)=\sigma^2$$
+
+This distribution is very important.
+
+Because of the *Central Limit Theorem*, the normal distribution both arises in many real life situations and plays a major role in statistical inference.
+
+
+## Common distributions: Normal / Gaussian
+
+The normal distribution is characteristed by a symmetric bell-shaped curve around the mean.
+
+Important special case: $\mathcal{N}(0,1)$, the *standard normal*.
+
+$$\,$$
+Example:
+
+A random variable measuring the height of men.
+
+
+## Common distributions: Normal / Gaussian
+
+In R:
+
+$$\,$$
+
+* `rnorm(n,mean,sd)` - to sample from this distribution
+
+* `dnorm(x,mean,sd)` - for the probability mass/density function
+
+* `pnorm(x,mean,sd)` - for the cumulative distribution function
+
+* `qnorm(p,mena,sd)` - to calculate theoretical quantiles
+
+
+## Common distributions: Normal / Gaussian
+
+```{r}
+l<-1000; x<-seq(-5,5,length=l)
+p1x<-dnorm(x,mean=0,sd=1); p2x<-dnorm(x,mean=0,sd=2)
+p3x<-dnorm(x,mean=0,sd=0.5); p4x<-dnorm(x,mean=2,sd=1)
+xFull<-rep(x,4); pFull<-c(p1x,p2x,p3x,p4x)
+pars<-factor(c(rep(1,l),rep(2,l),rep(3,l),rep(4,l)))
+df<-tibble(x=xFull,p=pFull,pars=pars)
+
+cols<-c("darkgrey", "steelblue", "salmon", "orange")
+labs<-c(expression(paste(sep="",mu,"=0, ",sigma,"=1")),
+        expression(paste(sep="",mu,"=0, ",sigma,"=2")),
+        expression(paste(sep="",mu,"=0, ",sigma,"=0.5")),
+        expression(paste(sep="",mu,"=2, ",sigma,"=1")))
+```
+
+
+## Common distributions: Normal / Gaussian
+
+```{r, warning=F}
+ggplot(data=df,mapping=aes(x=x,y=p,colour=pars,fill=pars)) +
+  geom_line(lwd=1,alpha=0.75) +
+  geom_area(alpha=0.25,position="dodge") +
+  scale_color_manual(values=cols) +
+  scale_fill_manual(values=cols,labels=labs) +
+  labs(fill="parameters") + guides(colour=F) +
+  ylab("density") + ggtitle("Normal distribution") + 
+  theme(text = element_text(size=20))
+```
+
+## Common distributions: Normal / Gaussian
+
+:::::: {.columns}
+::: {.column width="50%"}
+![Carl Friedrich Gauss (public domain / Wikipedia)](images/gauss.jpg)
+:::
+
+::: {.column width="50%"}
+![Pierre Simon Laplace (public domain / Wikipedia)](images/laplace.jpg)
+:::
+::::::
+
+
+## Common distributions: Chi-squared
+
+The sum of $k$ independent, squared, standard normal distributed random variables follows a $\chi^2$ distribution with $k$ degrees of freedom.
+
+$$Z_i\sim_{iid}\mathcal{N}(0,1), i=1,...,k \;\;\;\Rightarrow\;\;\; X=\sum_{i=1}^kZ_i^2\sim\chi_k^2$$
+
+$$\,$$
+
+$$E(X)=k,\, Var(X)=2k$$
+
+$$\,$$
+
+Important in statistical hypothesis testing, more rarely used to directly model data.
+
+
+## Common distributions: Chi-squared
+
+In R:
+
+$$\,$$
+
+* `rchisq(n,df)` - to sample from this distribution
+
+* `dchisq(x,df)` - for the probability mass/density function
+
+* `pchisq(x,df)` - for the cumulative distribution function
+
+* `qchisq(p,df)` - to calculate theoretical quantiles
+
+
+## Common distributions: Student's t
+
+
+This distribution arises in parameter estimation and hypothesis testing.
+
+Let $z_i\sim_{iid}\mathcal{N}(\mu,\sigma^2), i=1,...,n$. Define
+
+$\bar{X}=\frac{1}{n}\sum_{i=1}^nX_i$ and $S^2=\frac{1}{n-1}\sum_{i=1}^n(X_i-\bar{X})^2$
+
+Then
+$$T=\frac{\bar{X}-\mu}{S/\sqrt{n}}\sim t_{n-1}$$
+
+## Common distributions: Student's t
+
+The degrees of freedom of the distribution, $\nu=n-1$ above, does not need to be integer valued, but can take any real value $\nu>0$.
+
+$$\,$$
+
+$$E(X)=1\mbox{ if }\nu>1\mbox{ otherwise undefined}$$
+$$Var(X)=\nu/(\nu-2)\mbox{ if }\nu>2,\, \infty\mbox{ if }1<\nu\leq 2\mbox{, undefined otherwise}$$
+
+$$\,$$
+Like the normal distribution, the t distribution is bell-shaped, but has heavier tails, meaning observations further away from the mean are more likely.
+
+## Common distributions: Student's t
+
+In R:
+
+$$\,$$
+
+* `rt(n,df)` - to sample from this distribution
+
+* `dt(x,df)` - for the probability mass/density function
+
+* `pt(x,df)` - for the cumulative distribution function
+
+* `qt(p,df)` - to calculate theoretical quantiles
+
+
+## Common distributions: Student's t
+
+```{r, warning=F}
+l<-1000; x<-seq(-8,8,length=l)
+p1x<-dt(x,df=0.25); p2x<-dt(x,df=1)
+p3x<-dt(x,df=5); p4x<-dt(x,df=100)
+xFull<-rep(x,4); pFull<-c(p1x,p2x,p3x,p4x)
+pars<-factor(c(rep(1,l),rep(2,l),rep(3,l),rep(4,l)))
+df<-tibble(x=xFull,p=pFull,pars=pars)
+
+cols<-c("darkgrey", "steelblue", "salmon", "orange")
+labs<-paste(sep="","k=",c(0.25,1,5,100))
+
+ggplot(data=df,mapping=aes(x=x,y=p,colour=pars,fill=pars)) +
+  geom_line(lwd=1,alpha=0.75) +
+  geom_area(alpha=0.05,position="dodge") +
+  scale_color_manual(values=cols) +
+  scale_fill_manual(values=cols,labels=labs) +
+  labs(fill="parameters") + guides(colour=F) +
+  ylab("density") + ggtitle("Student's t distribution") + 
+  theme(text = element_text(size=20)) 
+```
+
+
+## Common distributions: Student's t
+
+![William Sealy Gosset, aka "Student" (public domain / Wikipedia)](images/gosset.jpg)
+
+
+## Common distributions: F
+
+Also a distribution that arises as the null hypothesis of a test statistic.
+
+$$\,$$
+If two independent random variables $X_1\sim\chi_{k1}^2$, $X_2\sim\chi_{k2}^2$, then
+
+$$\,$$
+$$F=\frac{X_1/k_1}{X_2/k_2}\sim F_{k_1,k_2}$$
+
+## Common distributions: F
+
+In R:
+
+$$\,$$
+
+* `rf(n,df1,df2)` - to sample from this distribution
+
+* `df(x,df1,df2)` - for the probability mass/density function
+
+* `pf(x,df1,df2)` - for the cumulative distribution function
+
+* `qf(p,df1,df2)` - to calculate theoretical quantiles
+
+
+## Common distributions: relationships
+
+![Relationships between common distributions. (Casella, G., Berger, R.L. (2002), *Statistical Inference*, 2^nd^ ed., Duxbury)](images/CasellaBerger_DistRels.jpg)
+
+
+
+## 
+
+$$\,$$
+
+**Central Limit Theorem**
+
+## Sampling distributions
+
+Almost all of the studies you will work on will consist of drawing one (or several) samples that permits you to make inferences about a population (or several) of interest.
+
+How you sample from your population will impact your analysis. Objective assessment can only be made for **probability samples**, i.e. for samples where the inclusion probability is known and positive for every unit in the target population. In a **simple random sample** all units are sampled with equal probability from the target population.
+
+For every unit in the sample you observe one or several variables. In probability samples, these can be viewed as random variables.
+
+
+## Sampling distributions
+
+Usually we are not interested in the individual outcomes of the sample, but rather in some sample statistic. A **statistic** is a function of the sample observations $X_i$ and is therefore itself a random variable.
+
+$$\,$$
+Examples
+
+* the sample mean $\bar{X}=\frac{1}{n}\sum_{i=1}^n X_i$ (sample fraction if $X_i$ binary)
+* the sample variance $S^2=\frac{1}{n-1}\sum_{i=1}^n(X_i-\bar{X})^2$
+
+
+## Sampling distributions
+
+The probability distribution of a sample statistic is called its **sampling distribution**.
+
+In practice it can be hard to derive the sampling distribution analytically and we need to rely on approximations of this distibution based on so-called **asymptotic** results.
+
+$$\,$$
+
+The most important of these results is the **Central Limit Theorem**.
+
+
+## Law of Large Numbers
+
+Let $X_1,...,X_n$ be a sequence of iid random variables, with $X_i\sim F$, where F is a distribution with some finite mean $\mu$ and a finite variance $\sigma^2$. Let $\bar{X}_n=\frac{1}{n}\sum_{i=1}^nX_i$ be the sample average.
+
+The **Law of Large Numbers (LLN)** states that as $n\rightarrow\infty$, $\bar{X}_n\rightarrow \mu$
+
+$$\,$$
+Note that there is a strong and a weak version of this law, depending on what exactly you mean by "$\rightarrow$" and they differ slightly in necessary conditions for them to hold.
+
+
+## Central Limit Theorem
+
+While the LLN states that a sample average will get closer and closer to the true mean as the number of samples increases, fluctuating ever more closely around this value, the **Central Limit Theorem (CLT)** goes a step further and describes the distribution of these fluctuations.
+
+Let $X_1,...,X_n$ a sequence of iid random variables, $X_i\sim F$ a distribution with finite mean $\mu$ and finite variance $\sigma^2$. Then
+
+$$\frac{\bar{X}-\mu}{\sigma/\sqrt{n}}\overset{D}{\longrightarrow}\mathcal{N}(0,1)$$
+where $\overset{D}{\longrightarrow}$ denotes convergence in distribution.
+
+
+## Central Limit Theorem
+
+Crucially, since $\bar{X}=\frac{1}{n}\sum_iX_i$, this implies that any large enough sum of iid random variables approximately follows a normal distribution:
+
+$$\,$$
+
+$$\sum_iX_i\overset{D}{\longrightarrow}\mathcal{N}(n\mu,n\sigma^2)$$
+
+## Central Limit Theorem
+
+The CLT is central / key in statistics because:
+
+* Any statistic that is a sum of enough random variables with similar distributions will be approximately normally distributed.
+* The normal distribution can be used to approximate the sampling distributions of many statistics, and the statistical theory for the normal distribution can be used to derive properties.
+
+$$\,$$
+
+Examples
+
+* Normal approximation to the binomial.
+* t test robust against deviations from normality.
+* Height distributions of humans.
+
+
+## Central Limit Theorem
+
+```{r, echo=F}
+cols<-c("darkgrey","steelblue","salmon","orange","greenyellow","mediumorchid","lightcyan","brown")
+```
+
+```{r}
+generateMeans<-function(n=c(1,2,5,10,50,100,500,1000),col=cols,N=1e4,rDistFun,xlim=NULL,...){
+    sim<-matrix(nrow=N,ncol=length(n))
+    for(j in 1:length(n)){for(i in 1:N){
+            sim[i,j]<-mean(rDistFun(n[j],...))
+    }}
+
+    par(mar=c(1.5,2.5,1.5,0.5),mfrow=c(length(n),1))
+    for(j in 1:length(n)){
+        if(length(xlim)<2){
+            hist(breaks=100,sim[,j],main=paste(sep="","n = ",n[j]),yaxt="n",col=col[j])
+        }else{
+            hist(breaks=100,sim[,j],main=paste(sep="","n = ",n[j]),xlim=xlim,yaxt="n",col=col[j])
+        }
+    }
+}
+```
+
+
+## Central Limit Theorem
+
+```{r}
+generateMeans(rDistFun=rnorm,xlim=c(-3,3))
+```
+
+
+## Central Limit Theorem
+
+```{r}
+generateMeans(rDistFun=rbeta,shape1=0.5,shape2=0.5,xlim=c(0,1))
+```
+
+
+## Central Limit Theorem
+
+```{r}
+generateMeans(rDistFun=rbinom,size=2,prob=0.25,xlim=c(0,2))
+```
+
+
+##
+
+$$\,$$
+$$\,$$
+
+# Study designs
+
+## Outline
+
+In this session, we will cover these aspects:
+
+* Introduction to epidemiological studies
+* Study design considerations
+* Understanding study hypothesis
+* Elements of hypothesis testing
+* Sample size considerations
+* BREAK
+* Sample size calculation practice
+
+## Cross-sectional studies
+
+* Measure frequency (prevalence) of exposure or outcome in a defined population at a particular point in time
+  + Can be descriptive or analytical if frequency of outcome is compared according to exposure status
+
+
+## Cohort studies
+
+Key steps:
+
+* Define the study question 
+* Identify study population (cohort) without the outcome
+* Classify cohort according to exposure status
+* Follow the cohort over time to observe the outcome (prospectively or retrospectively)
+  + Can be descriptive or analytical if frequency of outcome is compared according to exposure status
+
+## Case-control study
+
+Key steps:
+
+* Define the study question 
+* Identify individual cases of the outcome of interest (cases)
+* Identify a representative group of individuals without the outcome (controls)
+* Compare cases and controls to assess differences in past exposure to one or more risk factors
+
+<!--
+Q: Can a case-control study be descriptive?
+-->
+
+## Interventional or experimental
+
+Key steps:
+
+* Define the study question 
+* Allocate exposure (the intervention) to one group
+* Another group allocated to no intervention (control or standard of care)
+* Follow up the groups over time 
+* Compare frequency of outcome in the intervention and control groups
+
+<!--
+Q: Can an intervention study be descriptive?
+-->
+
+## Types of interventional studies
+
+* Randomized controlled trial (gold standard)
+  + Randomized means allocation to the groups is random (note that random allocation is not the same as random sampling)
+  + Controlled means one group receives the intervention while another does not
+  + Trial means experiment or study
+* Individually RCT
+  + Randomize individual subjects / objects
+* Cluster RCT aka CRT
+  + Randomize groups of subjects / objects e.g. Villages, schools
+  + Requires special methods: sample size calculation and analysis
+* Quasi-experimental design: no randomization
+  + Example: a before-after comparison of a single site intervention
+
+## Quick note on ethics in RCTs
+
+* Recall that an RCT is similar to a cohort (observational) study
+* Differs because RCT allocates the exposure (intervention) other than observing a naturally occurring exposure
+* Investigator cannot allocate a harmful or withhold a beneficial intervention 
+* Equipoise means that there is no evidence that one of the interventions is superior to the other 
+
+## Complex intervention studies
+
+* Factorial design eg 2x2 
+  + ZAMSTAR trial (Ayles et al Lancet 2013)
+* Adaptive design eg seamless multi-arm multi-stage design 
+  + PASTAL trial (Choko et al Trials 2017)
+* Package of interventions compared to a simple standard of care 
+  + LINK4HEALTH trial in Swaziland (McNairy et al PLoS Med 2017)
+  
+<!--
+Q: what is the main problem with this sort of intervention?
+-->
+
+## General design considerations
+
+* Research question / hypothesis
+* Significance level
+* Power
+* Sample size
+* Money 
+* Logistics  
+
+<!--
+
+# Field experimental designs
+
+## Completely Randomized Design (CRD)
+
+* Used to study the effect of one factor - does not take into account any extraneous source of variation.
+* N units and m different treatments.
+* Treatments are assigned to experimental units at random.
+* Experimental units are relatively homogeneous.
+* Experiment will use very few replicates.
+* Each treatment is replicated the same number of times (balanced design).
+
+## CRD...
+
+Mostly, focus is on the following:
+
+* Are there treatment differences betwen the different experimental units - comparison of means
+* Which of the units differ?
+
+Advantages
+
+* Easy to implement
+* Controls a single extraneous source of variation.
+  + Removes its effect from the estimate of experimental error.
+
+Disdvantage
+
+* Experimental units are rarely homogeneous to allow for effective application of the CRD.
+
+## Randomized Complete Block Design (RCBD)
+
+* The field is divided into units to account for any variation in the field. 
+* Units within the block are homogeneous.
+* Treatments are then assigned at random to the subjects in the blocks-once in each block.
+* Provides more accurate results compared to the CRD due to the blocking.
+
+## RCBD
+
+![RCBD - 4 blocks and 4 treatments](images/rcbd.gif)
+
+## Latin square design
+
+* Experiment with m treatments.
+* 2 blocking factors.
+
+* Advantage: 
+  + Reduces more experimental error than with 1 blocking factor.
+  + Small-scale studies can isolate important treatment effects.
+  
+## Latin square design
+
+![Latin square design](images/latinsquare.jpg)
+
+## Other field experimental designs
+
+* Factorial designs.
+* Split-plot design.
+* Graeco- Latin square.
+
+-->
+
+## Hypothesis 
+
+Definition:
+
+* A supposition, arrived at from observation or reflection, that leads to refutable predictions
+* Any claim cast in a form that will allow it to be tested and refuted
+
+Example:
+
+Suppose we believe that everybody who lives up to age 90 or more is a non-smoker.
+We could investigate this in two ways:-
+
+* Prove the hypothesis by finding every single person aged 90 or more and checking that they are all non-smokers
+* Disprove the hypothesis by finding just one person aged 90 or more who smokes
+
+## Null Hypothesis
+
+* Definition 1: There is NO association between the risk factor and outcome in a population.
+
+* Definition 2: The hypothesis that the factor of interest is not associated with or not different from another factor or a pre-specified value. 
+
+* Example: 
+
+  + There is no difference in the efficacy of a new drug (Drug A) for malaria prophylaxis in contrast to a currently approved drug (Drug B).
+
+* Formal basis for testing statistical significance.
+* Start with proposition that there is no difference.
+
+* Statistical tests can estimate the probability an observed association could be due to chance.
+
+## Alternative hypothesis 
+
+* Definition 1: There IS an association between the risk factor and outcome in the population.
+
+* Definition 2: The hypothesis that the factor of interest is “statistically” different from another factor or the pre-specified value.
+
+* Example: 
+  + The new drug (Drug A) for malaria prophylaxis has better efficacy in preventing malaria in contrast to a currently approved drug (Drug B).
+
+* Can’t be tested directly.
+
+* Accepted by exclusion if the test of statistical significance rejects the null hypothesis.
+
+## Statistical hypothesis
+
+Underlying Statistical Principles:
+
+* A hypothesis is either true or not in the real world.
+* Can’t study the whole world; therefore must test hypothesis in a sample.
+* Can never absolutely prove (or disprove) the hypothesis.
+
+* Therefore we use statistical tests to determine whether there is sufficient evidence to reject the null hypothesis.
+
+## One and Two tailed Hypotheses
+
+* One-tailed Hypotheses: (one-sided) specifies a direction of association between a predictor and outcome variable.
+  + E.g. The new drug (Drug A) for malaria prophylaxis has better efficacy in preventing malaria in contrast to a currently approved drug (Drug B).
+
+* Two-tailed Hypotheses: (two-sided) specifies only that an association exists; it does not specify a direction.
+  + E.g. The new drug (Drug A) for malaria prophylaxis has a different efficacy in preventing malaria in contrast to a currently approved drug (Drug B).
+  + In other words, Drug A could be worse than Drug B 
+	OR Drug A could be better than Drug B.
+
+## Type I and  Type II Errors
+
+* Type I error: (False positive) reject a null hypothesis that is actually true in a population.
+
+  + In other words saying that the new drug (Drug A) for malaria prophylaxis has better efficacy in preventing malaria in contrast to a currently approved drug (Drug B), when it does not.
+
+* Type II error: (False negative) fail to reject a null hypothesis that is actually false in the population. 
+
+  + In other words saying that there is no difference in the efficacy of a new drug (Drug A) for malaria prophylaxis in contrast to a currently approved drug (Drug B), when Drug A is better than Drug B
+  
+## Errors in hypothesis testing
+
+![Types of errors in hypothesis testing](images/errors.png)
+
+## Alpha and Beta
+
+* Alpha $(\alpha)$: The probability of making a Type I error (rejecting the null hypothesis when it is true).
+
+* Beta $(\beta)$: The probability of making a Type II error (failing to reject the null hypothesis when it is actually false).
+  + Power = 1-$\beta$ (The probability of finding a significant result if one exists)
+
+* Ideally alpha and beta would be set to zero.
+* In practice they are made as small as possible.
+* Reducing them requires an increase in sample size.
+* Most studies use an alpha=0.05 and a beta=0.20.
+
+<!--
+## Statistical hypothesis testing
+
+* Deciding whether to accept or reject some hypothesis (usually the null hypothesis – $H_0$).
+
+* An effect is considered statistically significant if the P-value is less than some preset arbitrary value (usually alpha is set at 0.05 ).
+
+## P-Values
+
+* Definition 1: The probability of the obtained estimate being as far from the null hypothesis or further, assuming the null hypothesis is true.
+
+* Definition 2: The probability under the null hypothesis of observing a test statistic (t-statistic, Χ2 statistic) computed from the data of equal or greater absolute value, assuming there are no sources of bias in the data collection or analysis procedures.
+
+* P (test statistic of equal or greater value |$H_0$)
+
+* Assumptions: 
+
+  + Statistical model is correct for variability
+  + No bias
+
+## Statistical significance
+
+* Definition: Conclusion that the observed result for the factor of interest is sufficiently different from the other factor such that the difference is “unlikely” to have occurred by chance alone.
+
+* Statistical significance is usually determined from a p-value (probability value)
+
+## Chance
+
+* Definition: Chance is an outcome of a random process – an outcome that could not be predicted under any circumstances (e.g. a flip of a coin).
+
+## 95% Confidence Interval
+
+* Definition 1: If a study is replicated an infinite number of times, a 95% confidence interval should contain the correct point estimate 95% of the time.
+
+* Definition 2: If the underlying statistical model is correct and there is no bias, a confidence interval derived from a valid test will contain the true parameter with a frequency no less than its confidence level over an unlimited number of repetitions of the study. 
+
+* Assumptions: 
+  + Studies are identical except for random error.
+  + Statistical model is correct for variability.
+  + No bias.
+
+-->
+
+## Sample size considerations
+
+* Sample size calculations may be based on the precision or the power of a study
+  + Sample size is the number of units in each group in a study
+  + Precision refers to the desired width of the CI for a sample estimate (mostly applicable to descriptive studies)
+  * Power = 1-$\beta$ (The probability of finding a significant result if one exists)
+
+## Basic elements of sample size calculations
+
+* The objective of the study  (the null and alternative hypotheses of a study)
+
+* Most epidemiological studies aim to estimate some characteristic of the population. 
+
+* This may be a proportion, an effect e.g. Risk ratio/odds ratio, or a difference;
+
+* It depends on the type of study and outcome being studied. 
+
+## Basic elements of sample size calculations
+
+Study objectives may include some of the following:
+
+* Estimating a “Single value”: e.g.
+  + To examine what proportion of the population of Malawi currently smokes. 
+  + To estimate the prevalence of anaemia in under-fives in a malaria endemic area. 
+* “Comparison of outcomes”: 
+  * To examine the association between hormone replacement therapy and cardiovascular disease. 
+  * To examine how much the risk of malaria will be reduced with the use of impregnated bed-nets. 
+  * To examine the effect of a new intervention on the incidence of stomach cancer. 
+
+## Relationship between sample size and power
+
+![Relationship between power and sample size](images/power.png)
+
+## Notes on sample size
+
+Sometimes sample size is too large-may not be funded and can be unethical
+
+* Reduce power of the study
+* Reduce precision by increasing margin of error
+* Change objective (outcome of interest)
+
+## Sample size for estimating a proportion
+
+Example: 
+
+* Suppose you want to estimate the proportion of all children aged 12 to 24 months in Blantyre district who received measles vaccine in the year 2011.
+
+## Sample size for estimating a proportion
+
+There are 3 steps to calculate sample size for a proportion:
+
+* First, provide an estimate of the proportion of children immunised – usually obtained from previous studies e.g. 80% 
+
+* If you have no idea, choose 50% as most conservative estimate
+
+* Decide confidence level. e.g. 95%
+
+* Decide margin of error e.g. 5% (absolute)
+
+* The sample size is 32 (NB sample size is almost always rounded upwards to gain power)
+
+## Sample size for estimating a proportion
+
+The sample size for estimating a single proportion is given by:
+
+
+$$n=\frac{p(1-p)}{(E/1.96)^2}$$
+
+
+* where 
+  + $n$ = minimum sample size;  
+  + $p$ = expected prevalence; 
+  + $E$ = margin of error (expressed as a proportion); 
+  + 1.96 is the Z value corresponding to 0.05 significance level
+
+
+## Sample size for comparing two proportions
+
+Suppose you want to study and compare the prevalence of HIV in 2 populations (e.g. Ndirande vs Chilomoni).  To calculate the required sample size, you need:
+
+* Estimate of prevalence of HIV in each area
+
+* Significance level for the comparison  e.g.0.05
+
+* The power to detect the difference E.g. 0.9 (90% power)
+
+<!--
+
+## Sample size for comparing two proportions
+
+* Suppose the prevalence is 10% and 15%  
+
+* The sample size is 8406 in each area giving a total of 16,812
+
+* Note that formula has been omitted, we will practice this in R soon! 
+
+-->
+
+## Sample size for estimating a mean
+
+* Provide estimate of standard deviation of mean you intend to estimate -usually from previous studies 
+
+* Decide  confidence level. e.g 95% confidence interval
+
+* Decide how much variation around the true level you will allow in the estimation (margin of error). 
+
+## Sample size for comparing two means
+
+* First, provide an estimate of the standard deviation of two means you intend to compare -This is usually obtained from previous studies 
+
+* Decide what your confidence level will be. E.g 95% confidence interval i.e. significance level of 0.05 
+
+* Decide power of your study: 0.8 or 0.9 (80% OR 90%)
+
+## Sample size for CRT
+
+* Need to account for the additional sampling error
+  + Simple random sampling violated 
+  + Within and between cluster variation 
+* Intra cluster correlation coefficient (ICC)
+* Design effect (Deff)
+* K
+* Simplest solution: Adjust final sample size by multiplying by the Deff
+
+## Analysis of CRTs
+
+* Cluster level summaries approach
+  + Generally uses t-test as it is assumed robust to skewed distributions
+  + Log transformation may be considered for positive skew
+* Individual level data modelling (Session 5, analysis of hierarchical data)
+  + Robust standard errors
+  + Generalized estimating equations (random effects models)
+  
+## Useful reading and practice for sample size calculation in R
+
+* https://www.statmethods.net/stats/power.html
+* Package **pwr**
+* Theory behind sample size
+  + Normal distribution
+  + Simulations are better
+  + Statistician may be needed
+
+## Sample size calculation practical
+
+* In R Studio type:
+
+```{r}
+library(pwr)
+```
+
+**pwr** has several functions for calculating sample sizes
+
++ pwr.p.test - one sample proportion test
++ pwr.2p.test	- two sample proportions test (equal n)
++ pwr.2p2n.test	- two proportions (unequal n)
++ pwr.anova.test - balanced one way ANOVA
++ pwr.chisq.test - chi-square test
++ pwr.f2.test	- general linear model
++ pwr.p.test - proportion (one sample)
++ pwr.r.test - correlation
++ pwr.t.test - t-tests (one sample, 2 sample, paired)
++ pwr.t2n.test - t-test (two samples with unequal n)
+
+## One sample proportion
+
+* Suppose you want to test the null hypothesis $p=0.5$ against the alternative $p\neq 0.5$ where p is the proportion of all children aged 12 to 24 months in Blantyre district who received measles vaccine in the year 2011 and that you want to be able to reject the null hypothesis if the population proportion is $0.4$.
+
+Assume you require 80% power for a significance level of 5%.
+
+The calculation below shows that you will need to recruit $n=194$ participants.
+
+* In R type:
+
+```{r}
+sampsize <- pwr.p.test(h=ES.h(0.5,0.4) , sig.level =0.05, power = .8)
+sampsize
+```
+
+
+## Sample size plot 
+
+Can also plot the sample size - this even shows you power at other sample sizes.
+
+```{r}
+plot(sampsize)
+```
+
+## Two sample proportions
+
+* Suppose you want to study and compare the prevalence of HIV in 2 populations (e.g. Ndirande vs Chilomoni).
+* Suppose prevalence is 10% and 15%
+* Power = 90%, alpha = 5%
+* In R type:
+
+```{r}
+res <- pwr.2p.test(h = ES.h(p1 = 0.10, p2 = 0.15), sig.level = 0.05, power = .90)
+res
+```
+
+## Two sample means
+
+* The difference of the mean birth weights between babies born at Queen Elizabeth Central hospital (QECH) and Kamuzu Central Hospital (KCH) will be determined. Suppose at QECH the mean is 3000 g with a standard deviation of 500 g (from previous/pilot studies). At KCH the mean is 3300 with a s.d of 500 grams. The difference in mean birth weight to be detected is therefore 200 g. The significance level for the test will be 0.05. The sample size with 80% power to detect this difference if indeed it exists would be:
+
+* $H_0$: mean1 = mean2
+* $H_A$: mean1 ≠ mean2
+* mean1=3000g; mean2 = 3300g
+* Alpha = 0.05
+* Power = 0.80
+
+## Two sample means
+
+* The effect size is calculated as follows
+
+$$d = \frac{\bar{x_1}- \bar{x_2}}{\sigma}$$
+
+where $\sigma$ is the pooled standard deviation
+
+
+```{r}
+pwr.t.test(d = .6, sig.level = 0.05, power = .8, type = c("two.sample"))
+```
+
+
+## Power curves / sample size graphs
+
+We have seen a few slides earlier a example of a sample size curve.
+
+$$\,$$
+
+* Vary ranges of expected effect sizes
+* Compute sample sizes for different scenarios
+* Plot sample size against some value e.g. effect size
+* Useful if you are not sure what an appropriate effect size would be (and want to see how sensitive your sample size requirement is to changes in effect size).
+* Instead of varying effect size, you can also vary power or sample size (and keep other parameters fixed).
+
+## Simple R code for producing sample size graph
+
+```{r}
+h <- seq(.05,.8, by=.05)
+n <- rep(NA,length(h))
+for(i in 1:length(h)){
+	n[i] <-  pwr.p.test(h = h[i] , sig.level =0.05, power = .8)[2]
+}
+
+df<-data.frame(effectSize=h,sampleSize=unlist(n))
+
+df %>%
+  ggplot(mapping=aes(x=effectSize,y=sampleSize)) +
+  geom_point(size=8) +
+  geom_line(lty=2,lwd=0.75,col="darkgrey") +
+  theme_light() +
+  ggtitle("Sample size curve") +
+  xlab("Effect size") +
+  ylab("Sample size (per group)") +
+  theme(text=element_text(size=20))
+```
+
+
+## Adjusting for attrition
+
+If you expect that some data will not be useable / available (e.g. loos to follow-up or because a given assay is known to fail in a proportion of samples), then you need to adjust your calculated sample size for this:
+
+* Calculated sample size is $n$
+
+* Expected attrition proportion is $p$
+
+Then the adjusted sample size is $n'=n/(1-p)$.
+
+Examples:
+
+```{r}
+n<-100 # previous calculation (say) told us we need 100 participants
+p<-0.2 # we expect 20% loss-to-follow-up
+
+nAdj<-n/(1-p)
+nAdj<-ceiling(nAdj)
+
+print(nAdj)
+```
+
