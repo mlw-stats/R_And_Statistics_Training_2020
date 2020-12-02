@@ -1,0 +1,954 @@
+---
+title: "Statistics and R short course"
+author: "James Chirombo & Marc Henrion"
+date: "02 December 2020"
+output:
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE, fig.width=16, fig.height=9, dpi=150, highlight=T, collapse=T)
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+require(rms)
+```
+
+# Session 6: Basic regression modelling II
+
+## Preliminaries
+
+* Certificates of attendance
+  + You need to attend the first 7 sessions.
+  + Sign in & check spelling of name on the sign-in sheet!
+  + Only issued if paid-up and in exchange for completed feedback form.
+
+$$\,$$ 
+
+* Participant packs (copy of slides, R code etc.)
+  + [https://github.com/mlw-stats/R_And_Statistics_Training_2020](https://github.com/mlw-stats/R_And_Statistics_Training_2020)
+  
+$$\,$$ 
+  
+* Housekeeping
+  + Covid-19 measures
+  + Refreshments
+  + Fire exits
+  + Bathrooms
+  + RStudio Cloud 
+
+$$\,$$ 
+
+
+* Have you paid up?
+
+
+## Notation
+
+* $X, Y$ - random variables (here: X = predictor, Y = response)
+
+* $x, y$ - measured / observed values
+
+* $\epsilon$ - random variable (here: error / residual)
+
+* $\mathbf{\theta}$ - a vector of parameters
+
+* $\bar{X}$, $\bar{Y}$ - sample mean estimators for X, Y
+
+* $\bar{x}$, $\bar{y}$ - sample mean estimates of X, Y
+
+* $\hat{T}$, $\hat{t}$ - given a statistic T, estimator and estimate of T
+
+* $P(A)$ - probability of an event A occuring
+
+* $f_X(.)$, $f_Y(.)$ - distribution mass / density functions of X, Y
+
+* $X\sim F$ - X distributed according to distribution function F
+
+* $E[X]$, $E[Y]$, $E[T]$ - the expectation of X, Y, T respectively
+
+## Packages
+
+Install the following packages:
+
+
+```{r, eval=F}
+install.packages(c("nlme","lme4","gee","rms","car","Hmisc")
+```
+
+Then load them
+
+```{r, warning=F, message=F}
+library(nlme)
+library(lme4)
+library(gee)
+library(rms)
+library(Hmisc)
+```
+
+Also download the datasets `cholDiet.csv`, and `adlescent_small.csv` from GitHub.
+
+
+# GLM notes
+
+## GLM notes: Interaction terms
+
+Consider the model
+
+$$Y=\beta_0+\beta_1\mbox{ age}+\beta_2\mbox{ male}+\beta_3\mbox{ male}\cdot\mbox{ age}+\epsilon$$
+
+If you are female, the effect on $Y$ for age is $\beta_1$.
+
+If you are male, the effect on $Y$ for age is $\beta_1+\beta_3$.
+
+This is an **interaction effect**: age and sex are not independent. There are different slopes for age, depending on your sex.
+
+You can have interaction terms for 2 categorical variables, 1 categorical & 1 continuous, 2 continuous variables.
+
+Interpretation becomes more difficult.
+
+Always include both individual terms!
+
+
+## GLM notes: Interaction terms
+
+Example
+
+```{r}
+ado<-read.csv("adolescent_small.csv")
+
+modWeightInt<-glm(a104wt~a12age*hiv,data=ado)
+summary(modWeightInt)$coefficients
+```
+
+
+## GLM notes: Collinearity
+
+If two predictors $X_1,X_2$ are correlated, then estimation of the GLM can become difficult and interpretation of coefficients also becomes tricky.
+
+The numerical instability comes from the fact that MLE will involve matrix inversion and this will become singular the more $X_1$ and $X_2$ are correlated.
+
+*Centering* correlated variables will often help.
+
+Best to avoid including collinear predictors.
+
+**Variance inflation factors (VIF)** can help to spot multicollinearity and to remove problematic explanatory variables.
+
+
+## GLM notes: Collinearity
+
+Consider the model:
+
+$$Y=\beta_0+\beta_1 X_1+\beta_2 X_2+\ldots+ \beta_k X_k+\epsilon \qquad\qquad  (*)$$
+The VIF for the $j^{th}$ predictor variable is given by $VIF_j = 1/(1-R^2_j)$ where $R^2_j$ is the coefficient of determination of the model where $X_j$ is the response and all other explanatory variables in the model (*) are predictors.
+
+If the $j^th$ variable is independent of all other variables, then $R^2_j=0$ and $VIF_j=1$.
+
+In practice (rule of thumb): $VIF>10$ = severe collinearity, $VIF>5$ = high collinearity.
+
+
+## GLM notes: Collinearity
+
+In R: `car::vif` computes VIFs, but the function `Hmisc::varclus` can also be helpful.
+
+```{r}
+ado$tmpVar<-ado$a103ht+rnorm(nrow(ado),sd=6)
+
+modWeightColl<-glm(a104wt~as.factor(a13sex)+a12age+a103ht+tmpVar,data=ado)
+car::vif(modWeightColl)
+```
+
+
+## Notes: Variable selection
+
+How to select variables for inclusion in a model?
+
+$$\,$$
+
+This is not as trivial as it sounds. It is best to rely on expert knowledge and **avoiding** methods that are based on estimated effects / p-values such as
+
+* significant variables from single predictor regressions [the worst selection technique]
+* stepwise forwards selection
+* stepwise backwards selection [least bad as it involves at least a full model fot]
+
+These methods are used (very) commonly, especially forwards selection, but violate many principles of statistical estimation and hypothesis testing.
+
+## Notes: Variable selection
+
+The problems with these techniques (see Harrell, F., *Regression Modelling Strategies*, 2^nd^ ed., 2015, Springer.):
+
+$$\,$$
+
+1. Yield $R^2$ values that are biased high.
+2. Ordinary F and $\chi^2$ tests do not have the claimed distributions.
+3. Standard errors of regression coefficients are biased low.
+4. Resulting p-values are too small.
+5. Regression coefficients are biased high.
+6. Residual confounding is an issue.
+7. Collinearity is not solved but exarcerbated by these techniques.
+
+
+## Notes: Variable selection
+
+If you choose variables to keep in the model by their p-values, then use a high threshold, e.g. 0.5.
+
+The best approach is to discuss *a priori* with experts in the field in which the data have been collected and ask them what should be included in the model. Then base your inference only on that single model you fitted. Keep variables even if they have non-significant coefficients. E.g. predictions can still benefit from non-significant variables in the model.
+
+Regularisation techniques such as **elastic net**, **ridge regression** or the **lasso** have more desirable properties (but do not get around all problems). These methods put a penalty on the coefficients in the model and this either shrinks (ridge, L2 penalty) them or removes (lasso, L1 penalty) them from the model as the penalty is increased.
+
+
+## Notes: splines
+
+Most relationships between variables are not linear.
+
+Categorisation of a continuous predictor is often used to deal with such non-linearity. However, this is inefficient and leads to reduced power.
+
+Transformations or polynomial terms ($X^2$, $X^3$ etc) can be used, but polynomials in particular have undesirable properties (peaks & valleys, points far away can have a large impact on the curve in another region, ...).
+
+Linear or cubic **splines** and **Generalised Additive Models (GAMs)** can provide very flexible ways to model data while still providing all the statistical inference machinery we have seen for GLMs.
+
+`geom_smooth()` from ggplot2 uses GAMs for more than 1,000 observations (or when `method="gam"` is specified).
+
+## Notes: splines
+
+A draftman's *spline* is a flexible strip of wood or rubber to draw smooth curves (e.g. used by shipbuilders).
+
+Mathematically, for a response $y$ and a predictor $x$, a **linear spline** with $k=3$ knots at locations $x=k_1, k_2, k_3$ can be written as:
+
+$$\,$$
+
+$$y = \beta_0 + \beta_1 \cdot x + \beta_2 \cdot (x-k_1)_+ + \beta_3 \cdot (x-k_2)_+ + \beta_4 \cdot (x-k_3)_+ + \epsilon$$
+$$\,$$
+
+where $(x)_+=x$ if $x\geq0$ and $0$ otherwise.
+
+$$\,$$
+
+This means that the fitted curve has different slopes in different intervals of values of $x$:
+
+![](images/lspCoefs.png)
+
+## Notes: splines
+
+```{r}
+x<-rnorm(100,mean=5,sd=2)
+y<-2+x-2*x^2+0.2*x^3+rnorm(100,sd=5)
+df<-data.frame(x,y)
+rm(x,y)
+
+modLsp<-glm(y~lsp(x,c(3,6)),data=df)
+ # lsp() requires rms package
+
+newdf<-data.frame(x=df$x,predict.lm(modLsp,interval="confidence"))
+```
+
+
+## Notes: splines
+
+```{r}
+df %>%
+  ggplot(mapping=aes(x=x,y=y)) +
+  geom_point(size=3) +
+  geom_line(data=newdf,mapping=aes(x=x,y=fit),col="orange",lwd=2) +
+  geom_ribbon(data=newdf,mapping=aes(y=fit,ymin=lwr,ymax=upr),alpha=0.2) +
+  geom_vline(xintercept=3,lty=2,col="darkgrey") +
+  geom_vline(xintercept=6,lty=2,col="darkgrey") 
+```
+
+## Notes: splines
+
+Linear splines are not smooth and therefore cubic splines are often preferred.
+
+Cubic splines can be poorly behaved in the tails (outside of the most extreme knots). To avoid this, they can be forced t be linear in the tails. Such splines are called **restricted cubic splines**.
+
+```{r}
+modRcs<-glm(y~rcs(x,nk=3),data=df)
+  # rcs requires rms package
+
+newdf<-data.frame(x=df$x,predict.lm(modRcs,interval="confidence"))
+```
+
+```{r}
+df %>%
+  ggplot(mapping=aes(x=x,y=y)) +
+  geom_point() +
+  geom_line(col="orange",lwd=2,mapping=aes(x=x,y=predict(modRcs))) +
+  geom_line(data=newdf,mapping=aes(x=x,y=fit),col="orange",lwd=2) +
+  geom_ribbon(data=newdf,mapping=aes(y=fit,ymin=lwr,ymax=upr),alpha=0.2)
+```
+
+
+## Notes: splines
+
+Where the knots should be is not an easy problem. Adding them as model parameters to be estimated can lead to unstable parameter estimates and to standard estimation algorithms not being usable.
+
+$$\,$$
+
+Luckily for cubic splines, the position of knots matters less than the number of knots. Knots are therefore often placed at regular intervals or quantiles of the continuous predictor.
+
+
+## Notes: `rms` package
+
+$$\,$$
+
+The `rms` package provides a full set of tools for all kinds of regression problems.
+
+
+# Correlated data
+
+## Correlated data
+
+In the statistical analyses and models we have seen so far, there has always been one specific assumption:
+
+The data $\mathbf{x}_i, i=1,\ldots,n$ are independent observations.
+
+Why is this assumption needed?
+
+* Many estimation techniques require writing down the model likelihood of the data. This usually involves taking the product over all observations. This can only be done if the data are independent (two events A, B are independent if $P(A,B)=P(A)\cdot P(B)$).
+
+* Many statistical tests require an estimate of the standard error of one or several statistics. If data are correlated, then the correlated observations exhibit less variance than if they were uncorrelated $\Rightarrow$ the standard error(s) are underestimated $\Rightarrow$ the null hypothesis may be wrongly rejected.
+
+
+## Correlated data
+
+A number of common study designs result in data that are not independent observations:
+
+* A measurement of a biomarker before and after a treatment was administered.
+    + Measurements are for the same individual and hence correlated due to the specific genetic factors, physiological characteristics, lifestyle etc of each individual.
+
+* Longitudinal cohort data.
+    + Again measurements for the same individual will be correlated.
+    
+* Matched cases and controls.
+    + Observations are matched on a number of covariates. This makes them more similar to each other $\Rightarrow$ the data will be correlated.
+
+
+## Correlated data
+
+* Clustered data.
+    + If sampling patients from several hospitals, then the outcomes from patients from the same hospital will be more similar to each other than patients from other hospitals as they share the same hospital infrastructure, the same nurses and doctors, the same availability of drugs and the catchment populations of different hospitals may differ in ethnicities etc.
+    
+* Temporal or spatial data.
+    + Observations close in time or space tend to be more similar than observations far apart in time and space. This is called *autocorrelation*. (We will not consider such data further in this session).
+    
+    
+## Correlated data
+
+If we do not account for the correlated nature of the data in the analysis, we may bias the results and underestimate the variation in the data. Further some of the characteristics that induce the correlations in the data may also confound results if not accounted for.
+
+In this lecture we will explore common techniques for dealing with various types of correlated data.
+
+
+# Matched or paired data
+
+## Matched or paired data
+
+* It is common to match participants in two groups (e.g. diseased/healthy, treated/control, ...) in a study on a number of covariates in order to eliminate potential for confounding. However this matching of participants makes participants in the two groups more similar to each other. Hence this matching needs to be accounted for in the analysis or the effect size will be underestimated.
+  + t & Wilcoxon tests: paired samples versions
+  + Two proportion tests: McNemar or Liddell test
+  + Regression models: include all covariates used for matching participants in the model
+
+
+## Matched or paired data
+
+* Similarly sometimes data on the same experimental unit is collected under different conditions (e.g. before & after a treatment, or using different growth media in the lab). Again, this needs to be accounted for in an analysis.
+  + t & Wilcoxon tests: paired samples versions
+  + Two proportion tests: McNemar or Liddell test
+  + Regression models: include random effects in the model for participant / experimental unit ID
+  
+
+## Matched or paired data
+
+Example (continuous outcome):
+
+Download the data file `cholDiet.csv` from GitHub and read the data into R.
+
+This is a dataset from a cross-over trial where participants were randomly assigned to one of 2 diets (cornflakes or oat bran). After 2 weeks, cholesterol levels were measured in participants and they were then switched over to the other diet. After the 2 weeks on this diet, cholesterol levels were measured again.
+
+## Matched or paired data
+
+Example (continuous outcome):
+
+If we - *WRONGLY* - assume the data to be independent, then we would be concluding there is no difference in cholesterol levels between the diets:
+
+```{r}
+chol<-read.csv("choldiet.csv")
+
+t.test(chol$CORNFLK_mmolPerL,chol$OATBRAN_mmolPerL,paired=F)
+```
+
+
+## Matched or paired data
+
+Example (continuous outcome):
+
+If we now - *CORRECTLY* - specify that these are paired data, we find that there is a difference in cholesterol levels between diets:
+
+```{r}
+t.test(chol$CORNFLK_mmolPerL,chol$OATBRAN_mmolPerL,paired=T)
+```
+
+
+## Matched or paired data
+
+Example (continuous outcome):
+
+An equivalent way of doing this test is to compute the difference in cholesterol between the diets for each participants, then testing the null hypothesis that this difference is 0:
+
+```{r}
+t.test(chol$CORNFLK_mmolPerL-chol$OATBRAN_mmolPerL,mu=0)
+```
+
+
+## Matched or paired data
+
+Example (continuous outcome):
+
+Given how small this dataset is, assessing normality is difficult and a non parametric test may be safer. This will be a Wilcoxon test, and we again need to specify that the samples are paired.
+
+```{r}
+wilcox.test(chol$CORNFLK_mmolPerL,chol$OATBRAN_mmolPerL,paired=T)
+```
+
+Or equivalently:
+
+```{r}
+wilcox.test(chol$CORNFLK_mmolPerL-chol$OATBRAN_mmolPerL,mu=0)
+```
+
+
+## Matched or paired data
+
+Example (binary outcome):
+
+The R help file for `mcnemar.test()` contains an example for approval ratings of the US President in two surveys, one month apart for a random sample of 1,600 voting-age Americans (Data from Agresti, A., *Categorical Data Analysis*, 1990, p.350).
+
+```{r}
+apprPres<-matrix(c(794, 86, 150, 570),
+       nrow = 2,
+       dimnames = list("1st Survey" = c("Approve", "Disapprove"),
+                       "2nd Survey" = c("Approve", "Disapprove")))
+apprPres
+
+```
+
+## Matched or paired data
+
+```{r}
+mcnemar.test(apprPres)
+```
+
+Note: if we had - *incorrectly* - used `prop.test()` here, we would have reached the same conclusion: significant drop in approval rating.
+
+
+# Clustered, repeated measures & longitudinal data
+
+## Clustered data
+
+**Clustered data** arise when subjects within the same randomly selected group are observed:
+
+  + patients within clinics
+  + students within classrooms
+
+There can be several levels of clustering and these levels may be either **nested** or **crossed**:
+
+  + patients within wards within hospitals (*nested*)
+  + individuals of different ethnic groups within different towns in a country (*crossed*)
+
+
+## Clustered data
+
+Study designs resulting in clustered data:
+
+  + Observational studies on units within clusters
+  + cluster randomised trials
+  + randomised block design experiments
+
+$$\,$$
+
+Models fitted to clustered data are sometimes called **multilevel models**.
+
+
+
+## Repeated measurements & longitudinal data
+
+When observations are made on the same individuals / units over time, we get **longitudinal** data.
+
+When observations are made on the same individuals / units under different experimental or environmental conditions, we get **repeated measures** data. (The paired data we've seen earlier, are also an example of repeated measures data).
+
+These two data types are very similar, the main difference being that with longitudinal there is a clear ordering of the observations for each individual and there is a degree of difference between observation times.
+
+
+## Repeated measurements & longitudinal data
+
+The subject or unit can be considered to be a clustering variable for such data.
+
+Repeated measures and longitudinal data allow us to study both *within*-individual/unit and *between*-individual/unit changes.
+
+
+## Clustered, rm & longitudinal data
+
+Generalised least squares (GLS), allows to perform least squares minimisation, when there is a certain degree of correlation.
+
+To do this, GLS uses the *Mahalanobis distance* between observations and predicted values.
+
+$$\,$$
+
+$$\hat{\beta}=(\mathbf{y}-\mathbf{X}\mathbf{\beta})^TV^{-1}(\mathbf{y}-\mathbf{X}\mathbf{\beta})$$
+where $V$ is a *known* covariance matrix.
+
+GLS, while elegant, is not used that much these days. Generalised Estimating Equations often preferred (see later).
+
+In R: `gls()`.
+
+
+## Mixed models
+
+A **linear mixed model (LMM)** is a parametric linear model for clustered, longitudinal or repeated measures data that quantifies the relationship between a continuous dependent variable and several predictor variables. An LMM may include both fixed effects associated with continuous or categorical covariates and random effects associated with random factors. LMMs are called *mixed* because of the presence of both fixed and random effects.
+
+There are also **generalised linear mixed models**. The theory behind such models is complex, involving sophisticated approximations and several theoretical aspects (model diagnostics for example) have not been fully developed yet.
+
+For this reason we only consider LMMs in this session.
+
+
+## Mixed models
+
+**Fixed factors**
+
+We consider a categorical variable to be a fixed factor if all the levels of this variable that are of interest to a study are included in it.
+
+$$\,$$
+
+Examples:
+
+  + sex
+  + all regions in a country
+  + treatment methods
+
+
+## Mixed models
+
+**Fixed effects**
+
+Fixed effects, also called regression coefficients, describe the relationship between the response and the predictor variables (i.e. either continuous variables or fixed factors).
+
+Fixed effects are considered to be *fixed* quantitities in mixed models, only their estimators are considered to be random.
+
+## Mixed models
+
+**Random factors**
+
+A random factor is a categorical variable with levels that can be considered to have been *sampled randomly* from a larger, possibly infinite, set of levels. While not all levels are included in the study, the aim is make inference about the entire population of levels.
+
+$$\,$$
+
+Examples:
+
+  + individual / experimental unit
+  + towns
+  + schools
+  + hospitals
+  + fields
+
+
+## Mixed models
+
+**Random effects**
+
+Random effects are random values associated with the levels of a random factor and usually represent deviations from the relationships specified by the fixed effects.
+
+Random effects are considered to be random variables in mixed models, usually with zero mean and some variance that will be estimated.
+
+Examples:
+
+  + random intercepts
+  + random slopes
+
+
+## Mixed models
+
+Denote $\mathbf{Y}_i$ the vector of the response variable for the observations for subject i. Let $\mathbf{X}_i^{(1)},\ldots,\mathbf{X}_i^{(p)}$ be the vectors of fixed factors or continuous covariates and let $\mathbf{Z}_i^{(1)},\ldots,\mathbf{Z}_i^{(q)}$ be the vectors of random factors. Index experimental units / subjects by $i$ and let $t$ index the $n_i$ measurements for the $i^{th}$ subject.
+
+Writing $\mathbf{\beta}=(\beta_1,\ldots,\beta_p)^T$ for the fixed effects and $\mathbf{u}=(u_1,\ldots,u_q)^T$ for the random effects, an LMM can be specified as:
+
+$$\,$$
+
+$$
+\begin{align}
+Y_{ti} &=& \beta_1X_{ti}^{(1)}+\beta_2X_{ti}^{(2)}+\ldots+\beta_pX_{ti}^{(p)} & \qquad\mbox{fixed}\\
+       & & \quad +u_{1i}Z_{ti}^{(1)}+\ldots+u_{qi}Z_{ti}^{(q)}+\epsilon_{ti}                & \qquad\mbox{random}
+\end{align}
+$$
+
+
+## Mixed models
+
+In matrix notation we can write this as
+
+$$\,$$
+
+$$\mathbf{Y}_i = \mathbf{X}_i\mathbf{\beta}+\mathbf{Z}_i\mathbf{u}_i+\mathbf{\epsilon}_i$$
+where $$\begin{cases}\mathbf{u}_i\sim\mathcal{N}(\mathbf{0},\mathbf{D}) \\ \mathbf{\epsilon}_i\sim\mathcal{N}(\mathbf{0},\mathbf{R}_i)\end{cases}$$
+
+$$\,$$
+
+* $\mathbf{D}$ is the covariance matrix of the random effects
+
+* $\mathbf{R}_i$ is the coariance matrix of the residuals for the i^th^ individual
+
+
+The X covariates can be either time-varying (e.g. blood pressure at measurment time, or the time of measurement) or time-invariant (e.g. sex).
+
+
+
+## Mixed models: covariance structures
+
+There are two commonly used covariance structures for the $\mathbf{D}$ matrix:
+
+* unstructured
+
+$$
+\mathbf{D}=\left(\begin{array}{cc}
+\sigma_{u1}^2  & \sigma_{u1,u2} & \ldots & \sigma_{u1,up} \\
+\sigma_{u1}^2  & \sigma_{u2}^2\ & \ldots & \sigma_{u2,up} \\
+\vdots         & \vdots         & \ldots & \vdots \\
+\sigma_{u1,up} & \sigma_{u2,up} & \ldots & \sigma_{up}^2
+\end{array}\right)
+$$
+
+* variance components
+
+$$
+\mathbf{D}=\left(\begin{array}{cc}
+\sigma_{u1}^2  & 0             & \ldots & 0 \\
+0              & \sigma_{u2}^2 & \ldots & 0 \\
+\vdots         & \vdots        & \ldots & \vdots \\
+0              & 0             & \ldots & \sigma_{up}^2
+\end{array}\right)
+$$
+
+## Mixed models: covariance structures
+
+There are several commonly used covariance structures for the $\mathbf{R}_i$ matrix:
+
+* diagonal
+
+$$
+\mathbf{R}_i=\left(\begin{array}{cc}
+\sigma^2  & 0        & \ldots & 0 \\
+0         & \sigma^2 & \ldots & 0 \\
+\vdots    & \vdots   & \ldots & \vdots \\
+0         & 0        & \ldots & \sigma^2
+\end{array}\right)
+$$
+
+* compound symmetry
+
+$$
+\mathbf{R}_i=\left(\begin{array}{cc}
+\sigma^2+\sigma_1  & \sigma_1          & \ldots & \sigma_1 \\
+\sigma_1           & \sigma^2+\sigma_1 & \ldots & \sigma_1 \\
+\vdots             & \vdots   & \ldots & \vdots \\
+0                  & \sigma_1          & \ldots & \sigma^2+\sigma_1
+\end{array}\right)
+$$
+
+
+## Mixed models: covariance structures
+
+* AR(1)
+
+$$
+\mathbf{R}_i=\left(\begin{array}{cc}
+\sigma^2             & \sigma^2\rho & \ldots & \sigma^2\rho^{n_i-1}\\
+\sigma^2\rho          & \sigma^2     & \ldots & \sigma^2\rho^{n_i-2} \\
+\vdots               & \vdots       & \ldots & \vdots \\
+\sigma^2\rho^{n_i-1} &  \sigma^2\rho^{n_i-1} & \ldots & \sigma^2
+\end{array}\right)
+$$
+
+The $\mathbf{D}$ and $\mathbf{R}_i$ matrices can also be specified such as to allow *heterogeneous variances* for different groups of subjects (e.g. males / female):
+
+  + same structures
+  + different values
+  
+
+## Mixed models: marginal models
+
+For every LMM, one can specify a corresponding **marginal model**, i.e. the same model but without random effects.
+
+The random effects in LMMs allow to study between-subject/cluster variation, but they are absent from marginal models. This means that LMMs allow for subject specific inference, whereas marginal models do not. For this reason LMMs are called *subject-specific* models and marginal models are referred to as *population averaged* models.
+
+
+## Mixed models: marginal models
+
+For the matrix notation of LMMs we used before, the corresponding marginal model is specified as
+
+$$\mathbf{Y}_i = \mathbf{X}_i\mathbf{\beta}+\mathbf{\xi}_i$$
+where $\mathbf{\xi}_i\sim\mathcal{N}(\mathbf{0},\mathbf{V}_i)$
+
+The same structures we described for the $\mathbf{D}$ and $\mathbf{R}_i$ matrices can be used for the marginal variance-covariance matrix $\mathbf{V}_i$.
+
+The entire random part of the marginal model is described by $\mathbf{V}_i$.
+
+For the marginal model implied by a linear mixed model, $\mathbf{V}_i$ is given by
+
+$$\mathbf{V}_i=\mathbf{Z}_i\mathbf{D}\mathbf{Z}_i^T+\mathbf{R}_i$$
+
+
+## Mixed models: marginal models
+
+The marginal model does not contain random effects $\mathbf{u}_i$ and hence is not a mixed model.
+
+$$\,$$
+
+In linear mixed models, the fixed effects $\mathbf{\beta}_i$ have both a subject-specific and a population averaged interpretation. This is not the case for generalised linear mixed models, where the link functions results in different fixed effects in the mixed and marginal models that correspond to each other.
+
+
+## Mixed models: estimation
+
+We have seen maximum likelihood (ML) estimation in the context of (generalised) linear models: parameters are obtained by maximising the model likelihood function.
+
+$$\,$$
+
+Writing $\mathbf{\theta}$ for the variance-covariance parameters given by the $\mathbf{D}$ and $\mathbf{R}_i$ matrices, the key difficulty in LMMs is to estimate both the fixed effects $\mathbf{\beta}$ and the covariance parameters $\mathbf{\theta}$.
+
+
+## Mixed models: estimation
+
+The details of the estimation procedures are beyond the scope of this course, but there are 2 different ways of estimating the covariance parameters $\mathbf{\theta}$:
+
+* **maximum likelihood (ML)** uses a profile likelihood function for $\mathbf{\theta}$
+
+* **restricted or residual maximum likelihood (REML)** uses a restricted likelihood function instead
+
+REML is usually the default estimation method in software packages and it is often preferred as it results in *unbiased* estimates of the covariance parameters as it accounts for the loss of degrees of freedom due to estimating the fixed effects $\mathbf{\beta}$.
+
+
+## Mixed models: estimation
+
+The standard errors of the fixed effects are biased downwards in both ML and REML. The estimation process involves the $\mathbf{V}_i$ matrix from the implied marginal model and this is replaced by an estimate $\hat{\mathbf{V}}_i$ but the uncertainty in this estimate is not accounted for. Some softwares provide an adjustment to the standard errors.
+
+
+## Mixed models: inference
+
+Tests for fixed effects:
+
+* likelihood ratio tests
+    + based on ML estimatation; REML not appropriate
+    
+* t-tests for single fixed effects
+    + degrees of freedom need to be approximated
+    
+* F tests for multiple fixed effects
+    + degrees of freedom need to be approximated
+    
+
+## Mixed models: inference
+
+* likelihood ratio tests
+    + REML needs to be used because of biased estimated for covariance parameters with ML
+    + When testing values on the boundary of the parameter space (e.g. testing if any covariance parameter is zero), the test statistics follows a mixture of $\chi^2$ distributions; otherwise simply a $\chi^2$ with d.f. equal to the difference in number of parameters between the nested models
+    
+* Wald $z$-tests
+    + requires a large number of levels in the random factor associated with the parameters that are tested
+    
+    
+## Mixed models: inference
+
+Computation of p-values associated with fixed and random effects can be non-trivial in mixed models.
+
+$$\,$$
+
+For this reason, some software packages, e.g. `lme4`, do not provide p-values.
+
+
+## Mixed models: diagnostics
+
+Diagnostic checks proceed largely as for other models (e.g. GLMs), but obviously with the specific dsitributional assumptions made by the LMMs.
+
+$$\,$$
+
+As LMMs are estimated using maximum likelihood techniques, goodness-of-fit measures involving the likelihood (e.g. AIC, BIC) are defined.
+
+## Mixed models: diagnostics
+
+For residual-based diagnostic, there are several residuals that can be computed:
+
+* **raw residuals**
+    + **conditional residuals** $\hat{\mathbf{\epsilon}}_i=\mathbf{y}_i-\mathbf{X}_i\hat{\mathbf{\beta}}-\mathbf{Z}_i\hat{\mathbf{u}}_i$
+    + **marginal residuals** $\hat{\mathbf{\xi}}_i=\mathbf{y}_i-\mathbf{X}_i\hat{\mathbf{\beta}}$
+    
+    
+* **standardised** and **studentised residuals**
+    + standardised = residuals divided by their true standard deviation
+    + studentised = residuals divided by their estimated standard deviation
+    + **Pearson residuals** = residuals divided by the estimated standard deviation of the dependent variable
+
+
+## Mixed models: diagnostics
+
+Diagnostics for random effects proceed by using empirical best linear unbiased predictors (EBLUPs) of the random effects: $\hat{\mathbf{u}}_i$.
+
+EBLUPs are useful for checking for outlying subjects / experimental units.
+
+Checking EBLUPs for normality is of limited value as EBLUPs do not necessarily reflect the distribution of the random effects.
+
+
+## Mixed models: R
+
+There are 2 main packages in R for fitting LMMs:
+
+* `nlme`
+  + used to be the standard library for this
+  + offers greater flexibility for specifying covariance structures
+  + largely superseded by `lme4`
+  + nested random factors
+  + function for LMMs: `lme()`
+
+* `lme4`
+  + newer, faster
+  + GLMMs
+  + nested & crossed random factors
+  + function for LMMs: `lmer()`
+  
+
+## Mixed models: R
+
+Type `?Orthodont` to get information about a dataset in the `nlme` package on orthodontic measurements.
+
+We can fit **random intercept** models (not the different way of specifying random factors in the 2 packages):
+
+* `nlme`
+
+```{r, eval=F}
+orthModLme<-lme(distance~age+Sex,
+                random=~1|Subject,
+                data=Orthodont)
+summary(orthModLme)
+```
+
+* `lme4`
+
+```{r, eval=F}
+orthModLmer<-lmer(distance~age+Sex+(1|Subject),
+                  data=Orthodont)
+summary(orthModLmer)
+```
+
+
+## Mixed models: R
+
+* Output using `nlme`:
+
+```{r, echo=F, collapse=T}
+orthModLme<-lme(distance~age+Sex,
+                random=~1|Subject,
+                data=Orthodont)
+summary(orthModLme)
+```
+
+
+## Mixed models: R
+
+* Output using `lme4`:
+
+```{r, echo=F, collapse=T}
+orthModLmer<-lmer(distance~age+Sex+(1|Subject),
+                  data=Orthodont)
+summary(orthModLmer)
+```
+
+
+## Mixed models: R
+
+Type `?sleepstudy` to get information on a dataset from the `lme4` on the reaction time for subjects in a sleep deprivation study.
+
+We can also fit **random slope** models:
+
+* `nlme`
+
+```{r, eval=F}
+sleepModLme<-lme(Reaction~Days,
+                 random=~Days|Subject,
+                 data=sleepstudy)
+summary(sleepModLme)
+```
+
+* `lme4`
+
+```{r, eval=F}
+sleepModLmer<-lmer(Reaction~Days+(Days|Subject),
+                   data=sleepstudy)
+summary(sleepModLmer)
+```
+
+
+## Mixed models: R
+
+* Output using `nlme`:
+
+```{r, echo=F, collapse=T}
+sleepModLme<-lme(Reaction~Days,
+                 random=~Days|Subject,
+                 data=sleepstudy)
+summary(sleepModLme)
+```
+
+
+## Mixed models: R
+
+* Output using `lme4`:
+
+```{r, echo=F, collapse=T}
+sleepModLmer<-lmer(Reaction~Days+(Days|Subject),
+                   data=sleepstudy)
+summary(sleepModLmer)
+```
+
+## GEE
+
+**Generalised Estimating Equations (GEE)** fit generalised linear models accounting for correlations due to categorical variables that are present in the data.
+
+GEEs do not include random effects and as such can be used only for population averaged inference. GEE models are marginal models.
+
+GEEs use estimating equations (obtained from the score equations in ML) to derive parameter estimates and they use only the first 2 moments of the data variables without directly maximising or even evaluating the model likelihood. this means likelihood based inferential and diagnostic tools such as likelihood ratio tests and AIC/BIC are not defined.
+
+Methods like GEE are sometimes called quasi-likelihood methods.
+
+
+## GEE
+
+The variance structure for the error term can be specified using the same structures we have seen for the $\mathbf{V}_i$ matrices in LMMs.
+
+GEEs will yield unbiased parameter estimates for $\mathbf{\beta}$, even if the correlation structure is misspecified. However the associated standard errors will be affected.
+
+GEE is not a model, but an estimating technique.
+
+## GEE
+
+In R: gee / GEE
+
+We can use GEE to fit a GLM to the orthodontic dataset:
+
+```{r}
+orthModGee<-gee(distance~age+Sex,
+                 id=Subject,
+                 data=Orthodont)
+summary(orthModGee)
+```
+
+
+## Note
+
+Other methods exist, e.g. Bayesian hierarchical models, but outside the scope of this course.
+
+$$\,$$
+
+The same is true for other types of correlated data such as time series and spatially correlated data.
+
+##
+
+[end of Session 6]
