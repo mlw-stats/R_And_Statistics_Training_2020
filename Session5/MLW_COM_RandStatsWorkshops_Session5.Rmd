@@ -1,0 +1,1456 @@
+---
+title: "Statistics and R short course"
+author: "Marc Henrion"
+date: "02 December 2020"
+output:
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE, fig.width=16, fig.height=9, dpi=150, highlight=T, collapse=T)
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+```
+
+# Session 5: Basic regression modelling
+
+## Preliminaries
+
+* Certificates of attendance
+  + You need to attend the first 7 sessions.
+  + Sign in & check spelling of name on the sign-in sheet!
+  + Only issued if paid-up and in exchange for completed feedback form.
+
+$$\,$$ 
+
+* Participant packs (copy of slides, R code etc.)
+  + [https://github.com/mlw-stats/R_And_Statistics_Training_2020](https://github.com/mlw-stats/R_And_Statistics_Training_2020)
+  
+$$\,$$ 
+  
+* Housekeeping
+  + Covid-19 measures
+  + Refreshments
+  + Fire exits
+  + Bathrooms
+  + RStudio Cloud 
+  
+$$\,$$
+
+* Installl the `pscl` library: `install.packages("pscl")`
+
+
+## Notation
+
+* $X, Y$ - random variables (here: X = predictor, Y = response)
+
+* $x, y$ - measured / observed values
+
+* $\epsilon$ - random variable (here: error / residual)
+
+* $\mathbf{\theta}$ - a vector of parameters
+
+* $\bar{X}$, $\bar{Y}$ - sample mean estimators for X, Y
+
+* $\bar{x}$, $\bar{y}$ - sample mean estimates of X, Y
+
+* $\hat{T}$, $\hat{t}$ - given a statistic T, estimator and estimate of T
+
+* $P(A)$ - probability of an event A occuring
+
+* $f_X(.)$, $f_Y(.)$ - distribution mass / density functions of X, Y
+
+* $X\sim F$ - X distributed according to distribution function F
+
+* $E[X]$, $E[Y]$, $E[T]$ - the expectation of X, Y, T respectively
+
+
+## Data
+
+Let's load some datasets for this session. Please download the datasets `titanic.csv` from the GitHub site and a dataset on birth weight from the University of Sheffield:
+
+[https://www.sheffield.ac.uk/polopoly_fs/1.886038!/file/Birthweight_reduced_R.csv](https://www.sheffield.ac.uk/polopoly_fs/1.886038!/file/Birthweight_reduced_R.csv)
+
+
+$$\,$$
+
+```{r}
+Tbreg<-read.csv("btTBreg.csv")
+Tbreg<-Tbreg %>% mutate(cd4change=cd42-cd41)
+# TB dataset used previously
+
+bw<-read.csv("https://www.sheffield.ac.uk/polopoly_fs/1.886038!/file/Birthweight_reduced_R.csv")
+# Data contributed by Ellen Marshall, University of Sheffield
+
+titanic<-read.csv("titanic.csv")
+titanic<-titanic[,-1]
+# data on survivors and casualties of the Titanic disaster
+```
+
+
+# Linear model & correlation
+
+## Linear model
+
+General concept of regression
+$$\,$$
+
+**Regression** means describing some aspect of a dependent variable $Y$ as a function of some predictor or independent variables $\mathbf{X}$ and parameters $\mathbf{\theta}$:
+
+$$\,$$
+
+$$f_1(Y)=f_2(\mathbf{X};\mathbf{\theta})$$
+$$\,$$
+
+Here we focus on describing the mean of $Y$ as a function of a **linear predictor** of $X$.
+
+3 main reasons for fitting regression models: **inference**, **prediction**, **adjustment**.
+
+
+## Linear model
+
+Let's suppose we have some data:
+
+$$\,$$
+
+```{r}
+df<-tibble(
+  x=runif(25,min=-5,max=5),
+  y=1.5*x+rnorm(25,sd=2)+3.5
+)
+
+ggplot(data=df,aes(x=x,y=y)) + 
+  geom_point(size=3) +
+  theme(text = element_text(size=20)) 
+```
+
+
+## Linear model
+
+Looks like there is a **linear** relationship between the 2 variables:
+
+as $x\nearrow$, so $y\nearrow$
+
+$$\,$$
+
+We can try to guess what that relationship is.
+
+E.g. we can guess $y\approx x+3$:
+
+```{r}
+ggplot(data=df,aes(x=x,y=y)) + 
+  geom_abline(intercept=3,slope=1,colour="steelblue",lwd=1.5) +
+  geom_point(size=3) +
+  theme(text = element_text(size=20)) 
+```
+
+
+## Linear model
+
+Looks good? Maybe the slope should be a bit steeper, the intercept larger?
+
+$y\approx 2x+4$
+
+$$\,$$
+
+```{r}
+ggplot(data=df,aes(x=x,y=y)) + 
+  geom_abline(intercept=4,slope=2,colour="salmon",lwd=2) +
+  geom_point(size=3) +
+  theme(text = element_text(size=20)) 
+```
+
+
+## Linear model
+
+Which line to pick?
+
+$$\,$$
+
+```{r}
+ggplot(data=df,aes(x=x,y=y)) + 
+  geom_abline(intercept=3,slope=0.5,colour="darkgrey",lwd=2) +
+  geom_abline(intercept=3.1,slope=1,colour="mediumorchid",lwd=2) +
+  geom_abline(intercept=3.8,slope=1.25,colour="orange",lwd=2) +
+  geom_abline(intercept=2.8,slope=1.75,colour="steelblue",lwd=2) +
+  geom_abline(intercept=3.5,slope=2,colour="salmon",lwd=2) +
+  geom_abline(intercept=4,slope=2.5,colour="greenyellow",lwd=2) +
+  geom_point(size=3) +
+  theme(text = element_text(size=20)) 
+```
+
+
+## Linear model
+
+We can try to minimize the errors, i.e. the deviations of the observed data from the line. Specifically, since these errors can be positive or negative, we can try to minimise the sum of the squares of the errors.
+
+This is the principle of **least squares** (LS).
+
+$$\,$$
+
+Let $\hat{y}_i=\beta_0+\beta_1 x_i$.
+
+We want to find values for $\beta_0, \beta_1$ so that
+$$SS=\sum_i (y_i - \hat{y}_i)^2=\sum_i(y_i-\beta_0-\beta_1 x_i)^2$$
+is the smallest / minimum it can be. 
+
+
+## Linear model
+
+```{r}
+ggplot(data=df,aes(x=x,y=y)) + 
+  geom_abline(intercept=3,slope=1,colour="steelblue",lwd=2) +
+  geom_segment(aes(x=x,xend=x,y=y,yend=x+3),colour="red",lwd=1.5) +
+  geom_point(size=4) +
+  theme(text = element_text(size=20)) 
+```
+
+
+## Linear model
+
+We can write the sum of squares as a function in R:
+
+```{r}
+sumSquares<-function(beta,dat=df){
+  return(
+    sum( (dat$y - (beta[1]+beta[2]*dat$x))^2 )
+  )
+}
+```
+
+We can then try this for several values, hoping to find the minimum:
+
+```{r}
+sumSquares(c(0,0))
+sumSquares(c(0,1))
+sumSquares(c(2,1))
+sumSquares(c(3,1.5))
+```
+
+
+## Linear model
+
+There are minimisation algorithms that can do this for us.
+
+```{r}
+betaHat<-optim(fn=sumSquares,par=c(0,0))
+print(betaHat$par)
+print(betaHat$value)
+```
+
+$$\,$$
+
+`betaHat` is a list object.
+
+Check what else it reports by typing `print(betaHat)`.
+
+For more details about `optim`, type `?optim`.
+
+
+## Linear model
+
+What we have done, is fit a **linear model**.
+
+$$y_i = \beta_0 + \beta_1 x_i + \epsilon_i$$
+
+$$\,$$
+
+In other words, for a dependent variable $Y$ and an independent variable $X$ we hypothesise there is a model
+
+$$Y=\beta_0+\beta_1 X +\epsilon$$
+
+where $\epsilon$ is a random variable.
+
+
+Note that by using least squares we only fit a function to data as best as we can. We don't make any *distributional* assumptions about $Y$ or $\epsilon$. 
+
+
+## Linear model
+
+We can fit this directly (without writing down the sum of squares function) by using the R function `lm` or `glm`.
+
+
+$$\,$$
+
+```{r}
+mod<-lm(y~x,data=df)
+
+print(mod)
+```
+
+
+
+## Linear model
+
+We can get more information by typing `summary(mod)`.
+$$\,$$
+You get the same results by using `glm` rather than `lm`.
+
+
+## Linear model
+
+If we write where $\bar{x}$, $\bar{y}$ for the sample means and define:
+
+$$SS_y=\sum_i(y_i-\bar{y})^2$$
+$$SS_x=\sum_i(x_i-\bar{x})^2$$
+$$S_{xy}=\sum_i(x_i-\bar{x})(y_i-\bar{y})$$
+
+The LS estimates for the parameters $\beta_0,\beta_1$ are:
+$$\hat{\beta}_1=S_{xy}/SS_x$$
+
+$$\hat{\beta}_0=\bar{y}-\hat{\beta}_1\bar{x}$$
+
+## Linear model
+
+
+Parameter interpretation:
+$$\,$$
+
+* $\hat{\beta}_0$ is the estimated *intercept* of the fitted regression line; it is the value predicted for $Y$ when $X=0$
+
+$$\,$$
+
+* $\hat{\beta}_1$ is the estimated *slope* of the fitted regression line; it gives by how much $Y$ changes, on average, for every increase in $X$ by 1
+
+
+## Linear model
+
+The total variation (total sum of squares = TSS) in the data is $SS_y$ and you can show that this can be split into 2 components:
+
+* the regression sum of squares $RSS = S_{xy}^2/SS_x$
+* the error sum of squares $ESS = TSS-RSS = SS_y-(S_{xy}^2/SS_x)$
+
+The **coefficient of determination** $R^2$ gives the proportion of the variation that is explained by the regression model.
+
+$$R^2=\frac{RSS}{TSS}=\frac{S_{xy}^2}{SS_xSS_y}$$
+In the case of a single predictor $X$, $R^2$ is also the squared sample correlation coefficient $\rho(\mathbf{y},\mathbf{x})$ between the observed $\mathbf{y}$ and $\mathbf{x}$.
+
+
+## Linear model
+
+So far we just fitted a line. Implicitly we made the following assumptions:
+
+* The data used to fit the model are representative of the underlying population.
+* The true relationship between $X$ and $Y$ is linear.
+
+$$\,$$
+
+If we want to make *statistical inference* about any of the parameters in the model, we need to make additional assumptions:
+
+* the random error $\epsilon\sim\mathcal{N}(0,\sigma^2)$ - specifically this implies that the residuals $\epsilon_i$ are *homoscedastic* (have equal variance)
+* the observations $y_i$ are independent given the $x_i$ - in other words the residuals $\epsilon_i$ are independent
+
+
+## Linear model
+
+Once we have made these assumptions, we can do statistical tests:
+
+* test if $\beta_1=0$?
+* test if the population correlation parameter $\rho=0$
+
+The above 2 tests are in fact equal (in a model with a single predictor).
+
+$$\,$$
+
+We can also test if the intercept $\beta_0=0$ (or some other value), but this test is usually not sensible as $\beta_0$, the average value of $Y$ if $X=0$, has, in most situations, little more meaning than providing a numerical scale for the observed values.
+
+
+## Linear model
+
+As in one-way ANOVA, the linear regression model relates an outcome $Y$ to a predictor $X$. In ANOVA $X$ is discrete, in linear regression $X$ is continuous (though the mathematics above work just as well if $X$ is binary).
+
+We can produce an ANOVA-like table and define an $F$ statistic that can be used to test if $\beta_1=0$.
+
+![Analysis of variance table for the simple linear regression (Woodward, M., 2014, *Epidemiology, 3^rd^ed.*, CRC Press)](images/LinReg_SS_Table.jpg)
+
+
+## Linear model
+
+By assuming $\epsilon_i\sim\mathcal{N}(0,\sigma^2)$, we can also compute the *model likelihood*:
+
+$$L(\beta_0,\beta_1)=\prod_i \phi(y_i-\beta_0-\beta_1x_i|0,\sigma^2)$$
+where $\phi(.|\mu,\sigma^2)$ is the probability density function for a normal distribution with mean $\mu$ and variance $\sigma^2$.
+
+We can find values $\hat{\beta}_0'$ and $\hat{\beta}_1'$ that maximise $L(\beta_0,\beta_1)$. This is the principle of **maximum likelihood estimation** (MLE).
+
+
+## Linear model
+
+One can show that the MLE estimators are equal to the OLS estimators, i.e. $\hat{\beta}_0'=\hat{\beta}_0$ and $\hat{\beta}_1'=\hat{\beta}_1$.
+
+$$\,$$
+Notes:
+
+* This may be surprising, since we had to make additional assumptions to be able to write down the likelihood function.
+
+* In practice, fitting software minimise the negative log likelihood rather than maximising the likehihood.
+
+
+## Linear model
+
+Once you fitted a model, you can predict new data, e.g. in the case of a linear model:
+
+$$\hat{y}_{new}=\hat{\beta}_0+\hat{\beta}_1 x_{new}$$
+
+
+An important special case for diagnostic puposes is to predict the fitted value of your dataset:
+
+$$\hat{y}_i=\hat{\beta}_0+\hat{\beta}_1x_i$$
+
+This allows you to compute the residuals:
+
+$$r_i=y_i-\hat{y}_i$$
+
+The error sum of squares (ESS), also known as the residual sum of squares $ESS=\sum_ir_i^2=\sum_i(y_i-\hat{y}_i)^2$ is the variation not explained by the model: $TSS = RSS + ESS$.
+
+
+## Linear model
+
+
+2 main reasons for computing residuals:
+
+$$\,$$
+
+* adjustment: eliminate a nuisance parameter; e.g. blood pressure adjusted for age, weight adjusted for height, …
+
+$$\,$$
+
+* model diagnostics: residuals are quite useful for checking model assumptions, identifying influential observations etc. 
+(more later)
+
+
+
+
+
+# Generalised linear model
+
+## Generalised linear model
+
+What we have seen so far is the **linear model**, also known as **simple linear regression** in the case where we make no assumptions about the distribution of the errors:
+
+$$Y=\beta_0+\beta_1X+\epsilon$$
+where $\epsilon\sim\mathcal{N}(0,\sigma^2)$
+
+$$\,$$
+
+This can be generalised:
+
+* multiple predictors, both numerical and/or categorical: **general linear model**
+* non-normal error + link function: **generalised linear model (GLM)**
+
+$$\,$$
+
+The *general linear model* includes both simple and multiple linear regression as well as AN(C)OVA (with fixed effects only) models.
+
+
+## Generalised linear model
+
+The GLM relates outcomes variables $\mathbf{Y}$ to predictor variables $\mathbf{X}$ via
+$$\,$$
+
+$$E(\mathbf{Y}|\mathbf{X})=g^{-1}(\mathbf{X}\mathbf{\beta})$$
+$$\,$$
+Specifically the GLM consists of 3 things:
+
+* $\mathbf{Y}\sim F$ where $F$ is an exponential family distribution mith mean $\mathbf{\mu}$
+* a **linear predictor** $\mathbf{\eta}=\mathbf{X}\mathbf{\beta}$
+* a **link** function g(), linking $\mathbf{\mu}$, $\eta$: $g(\mathbf{\mu})=\mathbf{\eta}$
+
+$$\,$$
+Note that the above uses matrix notation: $\mathbf{Y}$, $\mathbf{X}$, $\mathbf{\beta}$ are all matrices.
+
+
+## Generalised linear model
+
+:::::: {.columns}
+::: {.column width="50%"}
+![John Ashworth Nelder (public domain / Wikipedia)](images/nelder.jpg)
+:::
+
+::: {.column width="50%"}
+![Robert Wedderburn (public domain / Wikipedia)](images/wedderburn.jpg)
+:::
+::::::
+
+
+## Generalised linear model
+
+An important special case is multiple linear regression:
+
+* $g(x) = x$
+* $Y\sim\mathcal{N}(\eta,\sigma^2)$
+
+This can be written as:
+
+$$Y=\beta_0+\beta_1X_1+\ldots+\beta_pX_p+\epsilon$$
+
+with $\epsilon\sim\mathcal{N}(0,\sigma^2)$
+
+A special case of this model: 1 or 2 categorical predictor(s) only (one- or two-way ANOVA; see practical).
+
+
+## Generalised linear model
+
+Same model we fitted before with `lm()`:
+
+```{r, collapse=T}
+modAlt<-glm(y~x,data=df,family=gaussian("identity"))
+
+summary(modAlt)
+```
+
+
+## Generalised linear model
+
+The linear predictor is linear in the coefficients $\beta_i$.
+
+These are linear models:
+
+$$E[Y|X] = \beta_0+\beta_1 X+\beta_2 X^2$$
+$$E[Y|X] = \beta_0+\beta_1 log(X)$$
+
+$$E[Y|X] = \beta_0 e^{-\beta_1X}$$
+
+
+These are non-linear models:
+
+$$E[Y|X] = \beta_0+\beta_1X^{-\beta_2}$$
+$$E[Y|X] = \frac{\beta_0}{1+(X/\beta_1)^2}$$
+$$E[Y|X]=\begin{cases}
+ \beta_0 +\beta_1 X& \mbox{ if } x<x_0 \\
+ \beta_2 +\beta_3 X& \mbox{ otherwise}
+\end{cases}$$
+
+
+## Generalised linear model
+
+Suppose we now observe data $D=\{\mathbf{y}, \mathbf{x}\}$ consisting of $n$ observations for 1 response and $p$ predictors. We can compute the probability density of observing these data:
+
+$$L(D|\mathbf{\theta})=\prod_{i=1}^n f(y_i;\mu_i=\beta_0+\beta_1 x_{i1}+\ldots+\beta_p x_{ip},\sigma_i)$$
+where $\mathbf{\theta}=(\beta_0,\ldots,\beta_k,\sigma)$, and  $f(;\mu,\sigma)$ is the pdf of the normal distribution with mean $\mu$ and variance $\sigma^2$.
+
+$$\,$$
+
+The parameters $\beta_0,\beta_1,\dots,\beta_p,\sigma$ that maximise the likelihood $L(D|\mathbf{\theta})$ are known as the **maximum likelihood estimates**.
+
+
+## Generalised linear model
+
+Easier to use matrix notation.
+
+Let:
+
+$$\mathbf{Y}=(Y_1,\ldots,Y_n)^T$$
+$$\,$$
+$$\mathbf{X}=\left(
+\begin{align}
+1      & \; X_{11} & \;\ldots & \; X_{p1} \\
+\vdots & \;\vdots   & \;\vdots & \;\vdots  \\
+1      & \; X_{1n} & \;\ldots & \;X_{pn}
+\end{align}
+\right)$$
+$$\,$$
+$$\mathbf{\beta}=(\beta_0,\ldots,\beta_p)^T$$
+$$\,$$
+$$\mathbf{\epsilon}=(\epsilon_1\ldots\epsilon_n)^T$$
+
+## Generalised linear model
+
+We can then write the general linear model as
+$$\,$$
+
+$$\mathbf{Y}=\mathbf{X}\mathbf{\beta}+\mathbf{\epsilon}$$
+where $\mathbf{\epsilon}\sim\mathcal{N}(\mathbf{0},\sigma^2\mathbf{I})$.
+$$\,$$
+
+This can also be written as:
+$$
+\begin{cases}
+E\left(\mathbf{Y}|\mathbf{X}\right)=\mathbf{X}\mathbf{\beta} \\
+Var(\mathbf{Y}-\mathbf{X}\mathbf{\beta})=\sigma^2
+\end{cases}
+$$
+$$\,$$
+$\mathbf{X}$ is called the **design matrix**.
+
+Dimensions: $\mathbf{Y}$ is $n\times1$, $\mathbf{X}$ is $n\times(p+1)$, $\mathbf{\beta}$ is $(p+1)\times1$, $\mathbf{\epsilon}$ is $n\times1$.
+
+
+## Generalised linear model
+
+We noted already previously that for the multiple linear regression case, the ML estimates are equal to the LS estimates.
+$$\,$$
+
+For observed data $\mathbf{y}$ and $\mathbf{x}$, the ML / LS estimates are given by
+$$\,$$
+
+$$\hat{\mathbf{\beta}}=(\mathbf{x}^T\mathbf{x})^{-1}\mathbf{x}^T\mathbf{y}$$
+$$\hat{\sigma}^2=\frac{1}{n}|\mathbf{y}-\mathbf{x}\hat{\mathbf{\beta}}|^2$$
+
+## Generalised linear model
+
+The above expressions are for the general linear model.
+
+$$\,$$
+
+In practice, for the generalised linear model with no identity link function and/or non-Gaussian errors, parameter estimates are found by using iteratively reweighted least-squares and involve iteratively updating working weights weights $\mathbf{W}$ and working responses (link scale) $\mathbf{Z}$.
+
+
+## Generalised linear model
+
+The GLM parameter estimates can be found using an **iteratively weighted least squares** (IWLS) algorithm:
+
+1. Start with initial estimates $\mu_i^{(r)}$.
+
+2. Calculate working responses $z_i^{(r)}$ and working weights $w_i^{(r)}$.
+
+3. Calculate $\mathbf{\beta}^{(r)}$ by weighted least squares.
+
+4. Repeat 2. and 3. until convergence.
+
+For models with so-called *canonical* link functions (the default links in R), this is the **Newton-Raphson method**. For Gaussian errors with identity link, the Taylor series expansion is exact and the algorithm finishes in 1 iteration.
+
+The IWLS algorithm for GLMs is so powerful because it works for the entire family of exponential distributions.
+
+
+## Generalised linear model
+
+Recap:
+
+* Independent observations, true relation between response and predictor(s) is linear: **linear regression**.
+
+* Normal distribution of errors / residuals, continuous & categorical predictors, linear predictor is linear in parameters (not necessarily in the predictors): **general linear model**.
+
+* Link function, exponential-family distribution for errors / residuals: **generalised linear model (GLM)**.
+
+
+# Data transformations
+
+## Generalised linear model
+
+**Data transformations** are often used to address violations of model assumptions, such as linearity of the relationship or non-constant variance. One can transform either the response variable $Y$ or the independent variables $X_1,\ldots,X_p$ or both.
+
+Here we *briefly* introduce two common tranformation methods. There are far more general methods for transforming both $Y$ and the predictors $X_1,\ldots,X_p$, such as *Alternating Conditional Expectation* (ACE), but this is beyond the scope of this lecture course and best considered within the framework of *Generalised Additive Models* (GAMs).
+
+1. Box-Cox transform
+
+2. Mosteller & Tukey's ladder of powers / bulging rule
+
+
+## Generalised linear model
+
+**The Box-Cox transform**.
+
+George Box and David Cox [3] introduced this algorithm for transforming the response variable $Y$. This predated the GLMs, so is typically used in the case of the general linear model, i.e. Gaussian distribution and identity link.
+
+The Box-Cox transform finds parameters $\lambda_1,\lambda_2$ so that
+$$\,$$
+
+$$
+Y^{(\lambda)}_{BC}=\begin{cases}
+\frac{(Y+\lambda_2)^{\lambda_1}-1}{\lambda_1} & \mbox{ if }\lambda_1\neq0 \\
+\mbox{ln}(Y+\lambda_2) & \mbox{ if }\lambda_1=0
+\end{cases}
+$$
+
+
+## Generalised linear model
+
+**The Box-Cox transform**.
+
+$\lambda_1,\lambda_2$ are estimated using the profile likelihood function.
+
+The Box-Cox transform assumes normality (in the case of the general linear model) in the transformed response variable.
+
+Also note that we require $Y>\lambda_2$.
+
+## Generalised linear model
+
+**The Mosteller-Tukey ladder of powers (bulging rule)**.
+
+This method allows to transform both the response $Y$ and the independent predictors $X_1,\ldots,X_p$.
+
+Note that transforming $X$ will change the curvature of the data without affecting the variance of $Y$, whereas transforming $Y$ will affect both the shape of the data and the variance of the response variable.
+
+For a general linear model, we will now fit
+
+$$Y^\kappa=\beta_0+\beta_1X^\gamma+\epsilon$$
+
+## Generalised linear model
+
+**The Mosteller-Tukey ladder of powers (bulging rule)**.
+
+Mosteller & Tukey [4] propose a visual aid to select appropriate power $\kappa, \gamma$ (next slide), but profile likelihood methods could be used as well to estimate optimal parameters.
+
+$$
+Z^{(\lambda)}_{MT}=\begin{cases}
+ Z^\lambda& \mbox{ if }\lambda\neq0 \\
+ \mbox{ln}(Z) & \mbox{ if }\lambda=0
+\end{cases}
+$$
+Note that $Z$ can be either the response variable or any of the predictors, with a different $\lambda$ parameter for each transformed variable. We require $Z>0$ if $\lambda\leq0$ though one could introduce shift parameters ($\lambda_2$) as in the Box-Cox transform.
+
+
+## Generalised linear model
+
+![The Mosteller & Tukey (1977) ladder of powers / bulging rule](images/MostellerTukey.png)
+
+## Generalised linear model
+
+We may face a choice where we can either use a link function or transform the response variable.
+
+In this case - what should you do?
+
+$$\,$$
+
+It will depend on what the purpose of developing the statistical model is in the first place, but usually using a link function rather than transforming the data is preferrable.
+
+The key difference is that by transforming $Y$, you affect both linearity and variance of the response: you change the distribution of your response variable, whereas a link function relates the mean of $Y$ to the predictors and does not affect the distribution of your response variable.
+
+
+## Generalised linear model
+
+Example:
+
+A log transform is often used to improve linearity and to remedy variance increasing with the mean.
+
+In the case of a log transform, we model $log(Y)$:
+
+$$log(Y)=\beta_0+\beta_1X_1+\ldots+\beta_pX_p+\epsilon$$
+And so
+$$E(log(Y)|X_1,\ldots,X_p)=\beta_0+\beta_1X_1+\ldots+\beta_pX_p$$
+Since mean(log) $\neq$ log(mean) in general, we cannot relate this back to the original data scale - an issue if some of our predictors are categorical and we wish to say something about subgroups.
+
+
+## Generalised linear model
+
+Example:
+
+Using a log link however, we model $Y$ directly, but relate the log of its mean to the predictors:
+$$\,$$
+$$log(E(Y|X_1,\ldots,X_p))=\beta_0+\beta_1X_1+\ldots+\beta_pX_p$$
+$$\,$$
+And we can calculate the predicted average response of Y:
+$$\,$$
+$$E(Y|X_1,\ldots,X_p)=e^{\beta_0+\beta_1X_1+\ldots+\beta_pX_p}$$
+
+
+
+# Statistical inference for GLMs
+
+## Generalised linear model
+
+Quite often, we want to do *statistical inference*: we can use statistical theory and the estimated regression coefficients to make statements about the data and hence the processes that gave rise to them.
+
+$$\,$$
+
+For instance we may want to check whether any of the predictor variables does indeed predict the response variable. That is, we want to test whether all or a subset of coefficients are zero.
+$$\,$$
+
+There are 3 types of test we can perform:
+
+1. Likelihood ratio tests
+
+2. Wald tests
+
+3. Score tests
+
+
+## Generalised linear model
+
+We can arrange our vector of parameters $\mathbf{\beta}$ so that it is the bottom $q$ of the $p+1$ coefficients that we want to test.
+$$\,$$
+$$\mathbf{\beta}=\binom{\mathbf{\beta}_1}{\mathbf{\beta}_2}$$
+where $\mathbf{\beta}$ is $(p+1)\times1$, $\mathbf{\beta}_1$ is $(p-q+1)\times1$ and $\mathbf{\beta}_2$ is $q\times1$.
+$$\,$$
+
+We can then test $H_0: \mathbf{\beta}_2=\mathbf{\beta}_2^0$ against $H_1:\mathbf{\beta}_2\neq\mathbf{\beta}_2^0$ where $\mathbf{\beta}_2^0$ are some set of fixed values (usually $\mathbf{\beta}_2^0=\mathbf{0}$).
+
+
+## Generalised linear model
+
+The likelihood ratio test is given by
+$$\,$$
+$$2[L(\hat{\mathbf{\beta}})-L(\hat{\mathbf{\beta}}_1,\mathbf{\beta}_2^0)]\sim\chi^2_{q}$$
+
+## Generalised linear model
+
+The Wald test is given by
+$$(\hat{\mathbf{\beta}}_2-\mathbf{\beta}_2^0)^T(Cov(\hat{\mathbf{\beta}}_2))^{-1}(\hat{\mathbf{\beta}}_2-\mathbf{\beta}_2^0)\sim\chi^2_{q}$$
+
+Wald tests are typically what is reported by statistical software, and for the case where $q=1$, this simplifies to a z-test (i.e. based on the normal distribution; recall: the square of a normal is a $\chi^2_1$).
+
+For $q=1$, we test $H_0:\beta_j=b$ vs. $H_1:\beta_j\neq b$ and the test statistic (using the normal distribution of the MLE estimates) is given by:
+
+$$Z_j=\frac{\hat{\beta}_j-b}{\sqrt{a(\phi)}(\mathbf{X}^T\hat{\mathbf{W}}\mathbf{X})^{-1}_{jj}}\sim\mathcal{N}(0,1)$$
+Note that this distributional result only holds asymptotically.
+
+
+## Generalised linear model
+
+The score test is given by
+$$\,$$
+$$s(\mathbf{\beta}_2^0)^T(Cov(s({\mathbf{\beta}_2^0)}))^{-1}s(\mathbf{\beta}_2^0)\sim\chi^2_{q}$$
+
+where $s(\mathbf{\beta})$ is the vector of *scores* / partial derivatives of the log-likelihood: $s(beta_j)=\frac{\delta l}{\delta \beta_j}$.
+
+
+## Generalised linear model
+
+All 3 tests are exact only *asymptotically* and for any finite dataset, they will be only approximate.
+$$\,$$
+
+For Gaussian distributions, specifically the general linear model, we can derive exact tests that take into account that we also need to estimate the dispersion parameter (in this case $\sigma^2$).
+
+
+
+## Generalised linear model
+
+**The F-test**
+
+$H_0:\beta_1=\beta_2=\ldots\beta_p=0$
+
+$H_1:\mbox{ at least one }\beta_j\neq0, j=1,\ldots,p$
+
+$$\,$$
+
+Test statistic: 
+$$F=RSS/ESS\sim F_{p,n-p-1}$$
+
+$$\,$$
+
+In general we can test a null hypothesis for $q$ of the coefficients to be all zero against one where not all of the $q$ coefficients are zero: $F\sim F_{q,n-p-1}$.
+
+
+## Generalised linear model
+
+**The t-test**
+
+The F test has a special case: when we test only $q=1$ parameter. This is a $F_{1,n-p-1}$ distribution, which turns out to be the square of a $t_{n-p-1}$ distribution (see Session 2 - diagram of relations between distributions).
+
+But you can also derive it directly as a test for the estimated coefficient:
+
+
+$$H_0:\beta_j=b$$
+
+$$H_1:\beta_j\neq b$$
+
+Test statistic:
+
+$$T=\frac{\hat{\beta_j}-b}{se(\hat{\beta}_j)}\sim T_{n-p-1}$$
+
+
+## Generalised linear model: confidence bands
+
+Once we have fitted a GLM, we can predict new values.
+
+Predicting response values for predictor values well outside the ones used to fit the model should be avoided!
+
+Prediction uses estimates. Can we derive prediction confidence intervals? What we predict in a GLM is the *mean* response. We can actually consider 2 types of prediction confidence intervals:
+
+a. for the mean response
+
+b. for a new observation
+
+The first one takes only the uncertainty of the model fit into account, the second one also takes the variability of the response values into account.
+
+
+## Generalised linear model: confidence bands
+
+We have seen that the estimators $\hat{\beta}$ are asympotically normally distributed. This implies that, on the link function scale (i.e. for the linear predictor $\eta$), we can construct confidence intervals using the asympotic normal distribution, then back transform to the scale of the response variable.
+
+For a 95% confidence interval for the mean response:
+
+$$\hat{\eta}\pm1.96\times SE(\hat{\eta})$$
+And then, backtransforming
+$$\hat{y}_{low}=g^{-1}(\hat{\eta}_{low})$$
+$$\hat{y}_{high}=g^{-1}(\hat{\eta}_{high})$$
+
+
+## Generalised linear model: confidence bands
+
+Example:
+
+```{r}
+modPois<-glm(dist~speed,data=cars,family=poisson)
+newX<-data.frame(speed=seq(1,30,length=500))
+pred<-predict(modPois,type="link",newdata=newX, se.fit=T)
+predFit<-exp(pred$fit)
+predLow<-exp(pred$fit-qnorm(0.975)*pred$se.fit)
+predHigh<-exp(pred$fit+qnorm(0.975)*pred$se.fit)
+
+plot(dist~speed,data=cars,cex=2,xlim=c(1,30),ylim=c(0,170))
+lines(newX$speed,predFit,lwd=2,col="steelblue")
+polygon(x=c(newX$speed,newX$speed[nrow(newX):1]),y=c(predLow,predHigh[nrow(newX):1]),col=rgb(70,130,180,alpha=100,maxColorValue=255),border=NA)
+```
+
+
+## Generalised linear model: confidence bands
+
+Confidence intervals for new observations are more tricky as we would need an estimate of the variability of the response variable on the link scale.
+
+For some models, we cannot derive analytical solutions (e.g. Poisson) and for others (e.g. binomial), it would make little sense.
+
+We can do this for general linear models however.
+
+
+## Generalised linear model: confidence bands
+
+For Gaussian distribution with identity link GLMs, we can even derive exact prediction confidence intervals - for both the mean response and new observations.
+
+Mean response confidence interval for a model with $p$ predictors:
+
+$$\hat{y}\pm t_{\alpha/2,n-p-1} SE(\hat{y})$$
+$$\,$$
+where $SE(\hat{y})=\sqrt{MSE\times\mathbf{x}_{new}(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{x}_{new}}$ and $\mathbf{x}_{new}$ is the vector of predictors corresponding to $\hat{y}$.
+
+Confidence intervals for a new observation for a model with $p$ predictors:
+
+$$\hat{y}\pm t_{\alpha/2,n-p-1} \sqrt{MSE+SE(\hat{y})^2}$$
+
+
+## Generalised linear model: confidence bands
+
+Example:
+
+```{r}
+set.seed(20190718)
+x<-rnorm(50)
+y<-1.5*x+rnorm(50)
+df<-data.frame(x=x,y=y)
+mod<-lm(y~x,data=df)
+xx<-seq(-3,3,length=500)
+predMean<-as.data.frame(predict(mod,newdata=data.frame(x=xx),interval="confidence"))
+predNew<-as.data.frame(predict(mod,newdata=data.frame(x=xx),interval="prediction"))
+```
+
+
+## Generalised linear model: confidence bands
+
+Example:
+
+```{r}
+plot(y~x,data=df,cex=2)
+lines(c(-3,3),coef(mod)[1]+coef(mod)[2]*c(-3,3),lwd=2,col="steelblue")
+polygon(c(xx,xx[length(xx):1]),c(predNew$lwr,predNew$upr[length(xx):1]),border=NA,col=rgb(200,0,0,alpha=80,maxColorValue=255))
+polygon(c(xx,xx[length(xx):1]),c(predMean$lwr,predMean$upr[length(xx):1]),border=NA,col=rgb(120,200,0,alpha=130,maxColorValue=255))
+lines(c(-3,3),coef(mod)[1]+coef(mod)[2]*c(-3,3),lwd=2,col="steelblue")
+```
+
+
+
+# Non-identity link functions & non-normal distributions
+
+## Generalised linear model
+
+Now suppose our response $Y$ is a binary variable.
+
+Obiously this will have a Bernoulli / binomial distribution: no problem for the GLM.
+
+Our model:
+$$E[Y|X]=P(Y|X)=g^{-1}(\beta_0+\beta_1 X)$$
+
+## Generalised linear model
+
+If $g(x)=x$, then $\beta_1$ will the average change in risk, $P(Y|X)$, for a one unit change in X.
+
+I.e. an estimate for $\beta_1$ will estimate the **risk difference** associated with a one unit change in X.
+
+But: given estimates $\hat{\beta_0},\hat{\beta_1}$, we can easily predict values for p outside of $[0,1]$. So an identity-link model for a binary outcome, almost always is nonsense.
+
+`glm(y~x,family=binomial("identity"))`
+
+
+## Generalised linear model
+
+Let's consider
+
+$$\log(E[Y|X])=\beta_0+\beta_1 X$$
+
+Now a one unit change in $X$ will results in a difference in logs, i.e. a log of a ratio.
+
+$e^{\beta_1}$ will be the **risk ratio** or **relative risk** associated with a one unit change in X.
+
+However, since $E[Y|X]$ is a probability, $log(E[Y|X])\leq 0$.
+
+So we can still sometimes predict impossible values.
+
+Still: this is a useful model sometimes. It's the log-binomial model.
+
+`glm(y~x,family=binomial("log"))`
+
+
+## Generalised linear model
+
+Now let's take $g(x)=log(x/(1-x))$, the **logit** function.
+
+This yields the **logistic regression** model:
+
+$$\mbox{logit}(E[Y|X])=\beta_0+\beta_1 X$$
+
+Now a one unit change in X will result in the log of a ratio of odds, i.e. $e^{\beta_1}$ will be the **odds ratio** associated with a one unit change in X.
+
+Logistic regression is a *direct probability model*: no distributional assumptions.
+
+
+## Generalised linear model
+
+Binomial data can be presented in 2 forms:
+
+* ungrouped; every $Y_i\in\{0,1\}$ and $m_i=1$
+
+* grouped; our data has been grouped (e.g. by class, by household, by village) and we only observe the number of events among $m_i$ trials in each group: $Y_i\in\{0,1,\ldots,m_i\}$ and $m_i\geq1$
+
+
+## Generalised linear model
+
+Example
+
+```{r}
+# ungrouped
+modLowBirthWeight<-glm(as.factor(lowbwt)~Gestation,data=bw,family=binomial)
+ # family=binomial("logit") also works
+#summary(mod4)
+
+round(digits=2,cbind(
+  exp(coef(modLowBirthWeight)),
+  exp(confint(modLowBirthWeight))
+))
+```
+
+
+## Generalised linear model
+
+Example
+
+```{r, collapse=T}
+# grouped
+modTitanic<-glm(cbind(survivors, dead) ~ class + age + sex + class*sex,
+                data = titanic,
+                family = binomial("logit"))
+
+round(digits=2,cbind(
+  exp(coef(modTitanic)),
+  exp(confint(modTitanic))
+))
+```
+
+
+## Generalised linear model
+
+Note that given parameters estimates $\hat{\mathbf{\beta}}$, we can compute estimated survival probabilities:
+
+$$P(\mbox{survival}|\mathbf{x})=\frac{e^{\mathbf{\hat{\beta}}^T\mathbf{x}}}{1+e^{\mathbf{\hat{\beta}}^T\mathbf{x}}}$$
+
+And we can compare these to the empirical survival probabilities.
+
+```{r}
+# empirical survival probabilities
+titanic$empSurvP<-round(digits=4,titanic$survivors/(titanic$survivors+titanic$dead))
+
+# model survival probabilities
+linearPredictor<-predict(modTitanic,type="link")
+titanic$modSurvP<-round(digits=2,exp(linearPredictor)/(1+exp(linearPredictor)))
+```
+
+
+## Generalised linear model
+
+```{r}
+print(titanic)
+```
+
+
+## Generalised linear model
+
+If $Y$ is a counting variable, then the Poisson distribution for $Y$ can be useful.
+
+In **Poisson regression**, the log link is used:
+$$log(E[Y|X])=\beta_0+\beta_1 X$$
+or equivalently
+$$E[Y|X]=e^{\beta_0+\beta_1 X}$$
+$\beta_1$ represents the increase in event rate associated with a one unit change in $X$.
+
+
+## Generalised linear model
+
+Example
+
+```{r}
+library(pscl) # install.packages("pscl")
+data(prussian) # data on deaths from horse kicks in the Prussian army (famous example of a Poisson process)
+
+modPrus<-glm(y~year+as.factor(corp),data=prussian,family=poisson)
+  # family=poisson(link="log") also works
+```
+
+
+
+
+# Model diagnostics
+
+## Diagnostics
+
+For GLMs, we can generalise the residual sum of squares (also known as the error sum of squares). We introduce the deviance:
+
+$$D(\mathbf{y},\hat{\mathbf{\mu}})=2\phi\left(l(\mathbf{\hat{\theta}}_s)-l(\hat{\mathbf{\theta}})\right)$$
+
+where $\hat{\mathbf{\theta}}_s$ and $\hat{\mathbf{\theta}}$ refer to the MLE parameters of the saturated and the proposed model respectively and 𝑙() is the log-likelihood function ($\phi$ is a scale parameter).
+
+The saturated model is a model with 1 parameter for every observation. It is the model that fits the data exactly.
+
+
+## Diagnostics
+
+The deviance is a scaled likelihood ratio statistic (recall: differences of logs = log of ratio).
+
+As we saw, the deviance generalises the residual / error sum of squares to GLMs. This means the deviance can be used as a measure of goodness of fit.
+
+Under the null hypothesis of no difference between the saturated and the proposed model:
+$$\,$$
+
+$$D(\mathbf{y},\hat{\mathbf{\mu}})\sim\chi^2_{n-p-1}$$
+
+
+## Diagnostics
+
+We can also compute the deviance for the worst model: the one where we include only an intercept. 
+
+This is called the **null deviance** and in the general linear model it is equal to the total sum of squares $TSS=SS_y$.
+
+$$\,$$
+$$D_0(\mathbf{y})=D(\mathbf{y},\bar{\mathbf{y}})=2\phi\left(l(\mathbf{\hat{\theta}}_s)-l(\hat{\theta}_0)\right)$$
+
+
+## Diagnostics
+
+**Residuals**
+
+We can calculate several different types of residulals in a GLM:
+
+$$\,$$
+
+* **response** $r_i=y_i-\hat{y}_i$
+
+* **working** $r^W_i$ obtained from the last iteration of the IWLS algorithm
+
+* **Pearson** response residuals standardised by the variance function
+$r^P_i=\frac{y_i-\hat{y}_i}{\sqrt{V(\hat{\mu}_i)}}$
+
+* **deviance** $r^D_i$ so that $\sum_i(r^D_i)^2=D(\mathbf{y},\hat{\mathbf{\mu}})$ 
+
+
+## Diagnostics
+
+**Residuals**
+
+Note: for normal models these are all equal.
+
+$$\,$$
+
+R will by default return deviance residuals (e.g.by typing `resid(mod)`). You can use the same R function to compute the other residuals: `resid(mod,type="pearson")` will compute the Pearson residuals.
+
+
+## Diagnostics
+
+Model diagnostics: why do it?
+
+There is a very simple & good reason: if the data violate the model assumptions, then all the inferential results we derived (coverage of CIs, p-values, …) no longer hold – we cannot really say anything about the process that generated the data from our model and the model predictions are likely to be very wrong.
+
+The point of model diagnostics is to check that the model assumptions appear to be met.
+
+There are several checks that can be done. For each check, We will first discuss the case of the general linear model, then move on to generalised linear models.
+
+
+## Diagnostics
+
+Let's fit a linear model to the TB data from Sessions 1 and 4:
+
+$$\,$$
+
+```{r}
+modBW_Mppwt<-glm(Birthweight~mppwt,data=bw)
+modBW_GestMppwt<-glm(Birthweight~Gestation+mppwt,data=bw)
+```
+
+
+## Diagnostics
+
+You have fitted a GLM model. How do you know it's any good?
+
+$$\,$$
+
+* Goodness of fit?
+
+  + Visual check
+  + $R^2$, $R_{adj}^2$
+  + AIC, BIC
+  
+$$\,$$
+  
+* Residuals?
+
+  + QQ plot
+  + Residuals vs. predicted values
+  + Hat values, Cook's distance
+
+
+## Diagnostics
+
+**Goodness of fit**
+
+Visual checks
+
+* These work well for simple models with only one or a limited number of predictors. 
+
+* Conceptually simple: just plot response vs. prdictor and add a line for the model fit.
+
+* Same for general & generalised linear models.
+
+```{r}
+  ggplot(data=bw,mapping=aes(x=mppwt,y=Birthweight)) +
+    geom_point() +
+    geom_abline(intercept=coef(modBW_Mppwt)[1],
+                slope=coef(modBW_Mppwt)[2],
+                col="steelblue",
+                lwd=2) +
+    xlab("mother's pre-pregnancy weight (lbs)") +
+    ylab("neonate birthweight (lbs)")
+```
+
+
+## Diagnostics
+
+**Goodness of fit**
+$$\,$$
+
+Same thing...
+
+```{r}
+ggplot(data=bw,mapping=aes(x=mppwt,y=Birthweight)) +
+  geom_point()+
+  geom_smooth(method="lm")
+```
+
+
+## Diagnostics
+
+**Goodness of fit**
+
+We have already seen $R^2$, the coefficient of determination. It can be interpreted as the proportion of variance explained by the model.
+
+It is not wise to maximise $R^2$: you will end up with overfitted models with many parameters.
+
+The **adjusted $R^2$**,
+$$R_{adj}^2=1-(1-R^2)\frac{n-1}{n-p-1}$$
+is penalised for the number of parameters in the model.
+
+
+## Diagnostics
+
+**Goodness of fit**
+
+For GLMs we need to generalise $R^2$ however. We can compute the proportion of deviance explained, the **pseudo** $\mathbf{R^2}$:
+
+$$\,$$
+$$R_d^2=1-\frac{D(\mathbf{y},\hat{\mathbf{\mu}})}{D_0(\mathbf{y})}$$
+
+Intuitively, you are checking how much of the null deviance is explained by your model.
+
+As for the standard $R^2$, if you select your model based on $R_d^2$, you will overfit, so use the adjusted $R_{d, adj}^2$.
+
+
+## Diagnostics
+
+**Goodness of fit**
+
+When maximum likelihood is used, you can also consider the likelihood itself as a measure of (relative) goodness of fit.
+
+Again: better to penalise for the number of parameters in the model.
+
+Akaike Information Criterion (AIC)
+$$2\cdot(p+1)-2\cdot\mbox{ln}(\hat{L})$$
+
+Bayesian Information Criterion (BIC)
+$$\mbox{ln(n)}\cdot(p+1)-2\cdot\mbox{ln}(\hat{L})$$
+
+This works also for GLMs.
+
+
+## Diagnostics
+
+**QQ plot**
+
+Plots the empirical quantiles of the residuals against those from a normal distribution. If the residuals are normally distributed, these should line on a straight line.
+
+```{r}
+rmodBW<-residuals(modBW_Mppwt)
+theoQ<-qnorm(order(order(rmodBW))/length(rmodBW)) # calculates theorectical normal quantiles
+plot(theoQ,rmodBW,
+     xlab="theoretical normal quantiles",
+     ylab="sample quantiles",
+     main="QQ plot")
+qqline(rmodBW) # just adds the line
+```
+
+
+## Diagnostics
+
+**QQ plot**
+
+This would also work:
+
+```{r}
+qqnorm(rmodBW,
+     xlab="theoretical normal quantiles",
+     ylab="sample quantiles",
+     main="QQ plot")
+qqline(rmodBW)
+```
+
+
+## Diagnostics
+
+**QQ plot**
+
+QQ plots show the empirical quantiles of the residuals against those from the theoretical distribution of the errors.
+
+For Gaussian response models, the theoretical distribution is just the normal distribution. For other response distributions, this can be a bit trickier and simulations may be needed needed to derive approximate theoretical quantiles.
+
+We know that the linear predictor estimates are approximately normally distributed, so we could compute residuals on that scale and then do a normal distribution QQ plot. However even this has its limitations
+
+
+## Diagnostics
+
+**QQ plot**
+
+Further, models like logistic regression are *direct probability* models and hence there are no distributional assumptions for the errors.
+
+For these reasons, in GLMs, as opposed to normal distribution linear models, QQ plots are not often used.
+
+
+## Diagnostics
+
+**Residuals vs. predicted values**
+
+You can easily (though subjectively) verify whether:
+$$\,$$
+
+* residuals centered symmetrically around 0
+* residuals have constant variance
+* there are any outliers
+
+```{r}
+plot(predict(modBW_Mppwt,data=bw),residuals(modBW_Mppwt),
+     xlab="fitted values",
+     ylab="residuals")
+```
+
+
+## Diagnostics
+
+**Residuals vs. predicted values**
+
+For non-normal distribution GLMs, the variance function of the model can imply a trend of the variance with the mean.
+
+for this reason, Pearson residuals are very useful in GLMs: these residuals are standardised by the estimated variance function. In other words, if the Pearson residuals exhibit non-constant variance, then this suggest we have misspecified the data distribution.
+
+
+## Diagnostics
+
+Typing `plot(modBW_Mppwt)` will produce these and a few more (we have not the time to cover everything here) diagnostic graphs.
+
+$$\,$$
+
+```{r}
+plot(modBW_Mppwt)
+```
+
+
+## Diagnostics
+
+**Influential observations**
+
+An **influential observation** is an observation which, if dropped from the dataset when fitting the model, would noticeably affect the model parameter estimates.
+
+We have already alluded to one type of such influential observations: observations with high leverage - large residuals near the extremes of the predictor variables' ranges.
+
+There are many methods, most based on re-fitting models while leaving out individual observations. We will focus on 2 metrics: **hat values** (measuring leverage of observations) and **Cook's distance** (measuring influence).
+
+
+## Diagnostics
+
+**Influential observations**
+
+The **hat matrix** $\mathbf{H}$ is the matrix that projects $\mathbf{y}$ onto the subspace spanned by the columns of the design matrix $\mathbf{X}$: $\hat{\mathbf{y}}=\mathbf{H}\mathbf{y}$. In the normal distribution linear model: $$\mathbf{H}=\mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T$$
+and in GLMs:
+$$\mathbf{H}=\mathbf{W}^{1/2}\mathbf{X}(\mathbf{X}^T\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^T\mathbf{W}^{1/2}$$
+$$\,$$
+
+The **hat values** $h_{ii}$ are the diagonal elements of this matrix and they indicate the leverage of observations.
+
+
+## Diagnostics
+
+**Influential observations**
+
+The $h_{ii}$ are bounded between 0 and 1 (in models with an intercept, they are bounded between 1/n and 1), and their sum, $\sum_i h_{ii}$, is always equal to $p+1$, the number of coefficients in the model, including the intercept. Problems in which there are a few very large $h_{ii}$ can be troublesome: in particular, large-sample normality of some linear combinations of the regressors is likely to fail, and high-leverage observations may exert undue influence on the results.
+
+The `R` function `hatvalues()` will compute hat values for both `lm` and `glm` objects.
+
+```{r}
+plot(hatvalues(modBW_Mppwt),cex=2)
+```
+
+## Diagnostics
+
+**Influential observations**
+
+The most common influence measure is **Cook's distance**. It is one of many leave-one-out / deletion methods for measuring influence of observations.
+
+If $\hat{\mathbf{\beta}}$ is the estimated coefficient vector from the full dataset, then let $\hat{\mathbf{\beta}}_{(i)}$ be the vector of coefficient estimates obtained from fitting the model to the dataset with the $i^{th}$ observation removed.
+
+The difference $\hat{\mathbf{\beta}}-\hat{\mathbf{\beta}}_{(i)}$ directly measures the influence of the $i^{th}$ observation: small / large difference = small / large influence.
+
+
+## Diagnostics
+
+**Influential observations**
+
+This difference is a vector however, and it is more convenient to summarise the influence by a single number.
+
+Cook's distance is the weighted sum of squares of the differences between the individual vector elements. In matrix notation:
+$$\,$$
+$$D_i=\frac{(\mathbf{\beta}-\hat{\mathbf{\beta}}_{(i)})^T(\mathbf{X}^T\mathbf{W}\mathbf{X})^{-1}(\mathbf{\beta}-\hat{\mathbf{\beta}}_{(i)})}{(p+1)s^2}$$
+
+
+## Diagnostics
+
+**Influential observations**
+$$\,$$
+
+The `R` function `cooks.distance()` computes Cook's distance for both `lm` and `glm` objects.
+
+```{r}
+plot(cooks.distance(modBW_Mppwt),cex=2)
+```
+
+
+## Diagnostics
+
+**Influential observations**
+
+The `R` package `car` has a helpful plotting function for plotting both the hat values and Cook's D (and also studentised residuals). Cook's D is given by the size of the circles.
+
+```{r, message=F, warnings=F}
+library(car)
+influencePlot(modBW_Mppwt)
+```
+
+##
+
+$$\,$$ $$\,$$
+[end of Session 5]
