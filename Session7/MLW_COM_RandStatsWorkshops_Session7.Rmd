@@ -1,0 +1,492 @@
+---
+title: "Statistics and R short course"
+author: "Marc Henrion"
+date: "03 December 2020"
+output:
+  powerpoint_presentation:
+    reference_doc: MlwCom_RandStats_Template.pptx
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE, fig.width=16, fig.height=9, dpi=150, highlight=T)
+
+require(tidyverse)
+require(knitr)
+require(gridExtra)
+```
+
+# Session 7: Reproducible research with R
+
+## Preliminaries
+
+* Certificates of attendance
+  + You need to attend the first 7 sessions.
+  + Make sure you sign in!
+  + Only issued in exchange for completed feedback form.
+
+$$\,$$ 
+
+* Participant packs
+  + [https://github.com/gitMarcH/R_And_Statistics_Training_2020](https://github.com/gitMarcH/R_And_Statistics_Training_2020)
+  + Copy of slides & R codes uploaded after each session.
+
+
+## Resources
+
+* R markdown
+
+[https://rmarkdown.rstudio.com/articles.html](https://rmarkdown.rstudio.com/articles.html)
+
+$$\,$$
+
+* R packages
+
+[https://r-pkgs.org](https://r-pkgs.org)
+
+[https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Creating-R-packages](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Creating-R-packages)
+
+[https://usethis.r-lib.org](https://usethis.r-lib.org)
+
+$$\,$$
+
+* GitHub & git
+
+[https://www.youtube.com/githubguides](https://www.youtube.com/githubguides)
+
+[https://guides.github.com/activities/hello-world](https://guides.github.com/activities/hello-world)
+
+[https://guides.github.com/introduction/git-handbook](https://guides.github.com/introduction/git-handbook)
+
+
+# Open Science
+
+## Open Science
+
+$$\,$$
+
+Discuss:
+
+$$\,$$
+
+* What do you understand by Open Science?
+
+$$\,$$
+
+* Why is Open Science important?
+
+
+## Open Science
+
+* Scientific outputs are freely available to anybody - policymakers, professional and amateur researchers, lay public.
+  + Research findings.
+  + Datasets.
+  + Methods.
+  + Other resources.
+
+$$\,$$
+
+* Science is transparent & reproducible.
+
+$$\,$$
+
+Part of a wider movement for open data, content, knowledge [http://opendefinition.org](http://opendefinition.org).
+Started in the 17th century with the advent of the academic journal[^1].
+
+[^1]: Machado, J., *"Open data and open science"*. In Albagli, Maciel & Abdo, *"Open Science, Open Questions"* 2015.
+
+
+## Open Science
+
+6 principles:
+
+$$\,$$
+
+1. **Open methodology** - document the entire research process.
+2. **Open source** - use open source technology only.
+3. **Open data** - make generated data publicly available.
+4. **Open access** - make results and data accessible by anybody.
+5. **Open peer review** - transparent, published quality assurance.
+6. **Open educational resources** - use / generate free, open training resources.
+
+$$\,$$
+
+[http://openscienceasap.org/open-science](http://openscienceasap.org/open-science)
+
+
+## Open Science
+
+Limits (?)
+
+$$\,$$
+
+* Confidential, sensitive, identifiable data --> GDPR, HIPAA etc. Some data may need to access controlled (e.g. human genomic data --> dbGaP).
+
+$$\,$$
+
+* Dangerous technology liable to misuse (e.g. H5N1 transmission studies in ferrets[^2]) - a false argument?
+
+$$\,$$
+
+* After fake news, fake science?
+
+[^2]: [https://www.sciencemag.org/site/special/h5n1](https://www.sciencemag.org/site/special/h5n1)
+
+# R markdown
+
+## R markdown
+
+As a researcher it is important that you can effectively **communicate** your results.
+
+R markdown allows creating reports that combine R code with the analysis output. It is a "unified authoring framework for data science, combining your code, its results and your prose commentary"[^3].
+
+It allows you to tell a story and share a report that transparently lists the code the generated your results. R markdown documents are fully reproducible (up to a point!) and support a number of output format: html, pdf, docx, pptx...
+
+R markdown is meant to achieve 3 things:
+
+* Communicate with stakeholders.
+
+* Collaborate with other researchers.
+
+* A framework within which to do data science (like a modern-day lab notebook).
+
+[^3]: [https://r4ds.had.co.nz](https://r4ds.had.co.nz)
+
+
+## R markdown
+
+$$\,$$
+
+:::::: {.columns}
+::: {.column width="50%"}
+There are 3 building blocks to a markdown document:
+
+$$\,$$
+
+1. A YAML header.
+
+$$\,$$
+
+2. Chunks of R code (if you want to strip out all chunks of R code within a markdown document to write a pure R script, you can use the `purl()` function from the `knitr` package).
+
+$$\,$$
+
+3. Narrative, formatted text.
+:::
+
+::: {.column width="50%"}
+![](images/yaml_chunk_text.png)
+:::
+::::::
+
+
+
+
+## R markdown
+
+$$\,$$
+
+**Exercise**
+
+$$\,$$
+
+1. Simulate a dataset and save it as a binary R data file (\*.rda or \*.RData).
+
+2. (In RStudio): File --> New File --> R markdown... --> (select type of output; choose html), then click on 'Knit' in the script editor panel.
+
+3. Write a new markdown document which:
+  + Loads the simulated data.
+  + Performs a basic analysis and produces a table with results.
+  + Displays a graph.
+
+
+Make sure to use R markdown's capability of providing a *commentary* along with your analysis.
+
+
+## R markdown
+
+Simulated data (as an example):
+
+```{r}
+dat<-data.frame(
+  type=sample(c("A","B"),size=100,prob=c(0.6,0.4),replace=T),
+  x<-rnorm(100,sd=5),
+  y<-rexp(100)
+)
+
+dat$z<-ifelse(dat$type=="A", 2*x-y+5, 1.25*x-0.5*y+1) + rnorm(100,sd=1.25)
+```
+
+## R markdown
+
+Analysis (as an example):
+
+* t-test comparing variable z between types A & B.
+* Linear regression of z against x.
+
+$$\,$$
+
+Graph (as an example):
+
+* Scatterplot of z against x, stratified by type.
+* Boxplot of z values by type.
+* Barplot of type.
+
+
+# R packages
+
+## R packages
+
+* Packages in R are **bundles of shareable code, data and documentation**.
+
+* Packages allow users to contribute functionality to R and avoid having to re-invent the wheel. They are what make R so powerful a tool.
+
+* Anybody can write an R package: this includes you (in fact you will write one before the session is up)!
+
+* To publish an R package formally (CRAN, Bioconductor) will take a bit more effort and provides *minimal* quality control.
+
+* Packages are not formally peer reviewed, the R community will provide feedback to package authors and maintainers but very new and/or little used packages could do incorrect analyses (buyer beware!). This is where commercial software with stringent QA and validation processes have a role to play.
+
+* Crucially, you can also use R packages to organise your own work flow and to publish your work as a reproducible **research compendium**[^4][^5].
+
+[^4]: Gentleman, R. & Temple Lang, D. (2007). *Statistical Analyses and Reproducible Research*. Journal of Computational and Graphical Statistics, 16:1, 1-23, DOI:10.1198/106186007X178663
+
+[^5]: Marwick, B., Boettiger, C. & Mullen, L. (2018). *Packaging Data Analytical Work Reproducibly Using R (and Friends)*. The American Statistician, 72:1, 80-88, DOI:10.1080/00031305.2017.1375986
+
+
+## R packages
+
+An R package can be in one of 5 states:
+
+1. Source (i.e. a directory)
+
+2. Bundled (i.e. a tarball, typically a `*.tar.gz` file)
+
+3. Binary (pre-compiled, single file, platform specific, typically a `*.tgz` file for Mac OS and `*.zip` for Windows)
+
+4. Installed (i.e. after you called `install.packages()`)
+
+5. In memory (i.e. after you called `library()`)
+
+
+## R packages
+
+A source R package has a required file and folder structure. Inside a source package directory you will need:
+
+* `DESCRIPTION` [*]
+* `NAMESPACE` [*]
+* `README.md`
+* `NEWS.md`
+* `R` directory [*]
+* `man` directory
+* `data` directory
+* `inst` directory
+
+The items marked by [*] are the minimum, bare-bones essentials.
+
+## R packages
+
+A source R package has a required file and folder structure. Inside a source package directory you will need:
+
+* `DESCRIPTION` **lists version, author, license info & dependencies**[*]
+* `NAMESPACE` **identifies functions to be exported or imported** [*]
+* `README.md` **optional documentation / information file**
+* `NEWS.md` **typically lists version history and updates to the package**
+* `R` directory **contains R code defining package functions** [*]
+* `man` directory **contains documentation files (best auto-generated)**
+* `data` directory **contains datasets (if needed)**
+* `inst` directory **extra resources, e.g. markdown scripts**
+
+The items marked by [*] are the minimum, bare-bones essentials.
+
+**You can create these files and directories either manually or using packages** `devtools` **and** `usethis`**.**
+
+## R packages
+
+To create a new R pckage, make use of RStudio's project feature:
+
+$$\,$$
+
+* Create a new project in a new directory (you should have an option to create a new package; if so delete `Hello.R` from `R/` and `Hello.Rd` from `man/`).
+
+$$\,$$
+
+* If needed, create the files & directories from the previous slide either manually or using packages `devtools` (function `document()`) and `usethis` (when initiating a package). 
+
+## R packages - NAMESPACE & DESCRIPTION
+
+:::::: {.columns}
+::: {.column width="50%"}
+![Exampe NAMESPACE file](images/namespaceExample.png)
+:::
+
+::: {.column width="50%"}
+![Example DESCRIPTION file](images/descriptionExample.png)
+:::
+::::::
+
+## R packages - Documentation (man pages)
+
+As we have seen, by typing `?` followed by the name of an R command or function, a help file is opened that shows what the function does, what input(s) it expects and what output(s) it produces.
+
+You will need to write these documentations when creating a package.
+
+Technically you would need to write `*.Rd` markdown files inside the `man/` directory for each function. Luckily, the `devtools` package function `document()` makes this a lot easier: all (it's still a bit tedious work though) you need to do is to add a formatted header comment to each function.
+
+## R packages - Documentation (man pages)
+
+* Documentation lines to start with `#'`.
+* Several standard sections:
+  + `@title` [followed by function title / brief summary; can also just be the first paragraph of the documentation comments]
+  + `@description` [followed by lengthier description of what the function does; can also just be the second paragrah of the documentation comments]
+  + `@param` [followed by parameter name and description of the parameter]
+  + `@return` [followed by a description of the output object of the function]
+  + `@examples` [followed by one or more reproducible examples of the functions usage]
+  + `@export` [followed by the function names to be exported; omitted for strictly internal functions]
+* Can also have custom sections: `@section SectionName`
+
+When your package R scripts have these documentation comments, then a call to `devtools::document()` will generated the needed `*.Rd` files inside the `man/` directory.
+
+## R packages - Documentation (man pages)
+
+:::::: {.columns}
+::: {.column width="50%"}
+
+![Example package script file documentation header.](images/functionDocumentationHeader1of2.png)
+
+:::
+
+::: {.column width="50%"}
+![](images/functionDocumentationHeader2of2.png)
+:::
+
+::::::
+## R packages - Documentation (man pages)
+
+* Datasets (sitting in the `data/` directory) need also to be documented (with an R script sitting in `R`) with slightly different tags:
+  + Description block [no tag]
+  + `@format` [giving details of the dataset format]
+  + `@source` [giving details of the dataset source]
+  + A last line, enclosed within quotation marks giving the name of the data object (needs to match the data stored in `data/`).
+  + Do NOT use an `@export` statement.
+  
+
+## R packages - Documentation (man pages)
+
+![Example dataset documentation file](images/dataDocumentation.png)
+
+## R packages - some best practices
+
+ * Write `TRUE` / `FALSE` not `T` / `F`
+ * Always write `package::function()` when using another package's function even if you have correctly specified the function in the NAMESPACE file.
+ * Do not use `library()` in an R script - that's what the `NAMESPACE` file is for.
+ * Do not use hardcoded paths.
+ * Do not edit system files, download or install files in the background that the user would not be aware of or other malicious things.
+
+
+## R packages
+
+$$\,$$
+
+**Exercise**
+
+Using the dataset you simulated earlier, write an R package which repeats the analysis from the markdown document that you wrote earlier.
+
+Write the package in such a way that:
+
+* You have a function `doAnalysis()` which takes at least one input argument (e.g. whether to do a t-test or a Wilcoxon rank sum test or whether to log transform the response variable in a regression model or not) and which repeats your analysis, returning the results as a list object.
+
+* You have a function `doPlot()` which also takes at least one input argument (e.g. the output object of `doAnalysis()` or color of the regression line or a logical indicator whether or not to plot the individual data points as well) and which produces the graph that your markdown document produced.
+
+Use RStudio's 'Build' --> 'Clean and Rebuild' feature to test your package as you go along.
+
+
+# GitHub, CRAN, Bioconductor
+
+## GitHub, CRAN, Bioconductor
+
+While you can use packages as part of your own workflow, if you want to use packages as part of an Open Science paradigm, then you really need to **publish** them.
+
+The easiest way to do this is using **GitHub**.
+
+GitHub is a hosting service for software development and fully integrates with `git` a powerful, open source version control software (you are *highly* encouraged to use git, but we will not cover that here).
+
+The `devtools` package is well integrated with GitHub and allows easy installation of your package by third party users. Be aware that when you install other people's packages from GitHub that have undergone **absolutely no vetting or checking**. Things may not work or you may even install malicious code unwittingly. This happens extremely rarely but is a possibility.
+
+## GitHub, CRAN, Bioconductor
+
+To use GitHub:
+
+$$\,$$
+
+* Create a GitHub account if you have not done so already.
+* Create a repository on GitHub and upload your package files (either using `git` or through the GitHub direct website upload feature).
+* Make sure your branch is called **master**.
+* Other users, as long as they have `devtools` installed, can then install your package (let's assume it is called "`mypackage`" and your GitHub user name is "`myusername`") very easily by typing `devtools:install_github("myusername/mypackage")`.
+* For example `devtools:install_github("gitMarcH/examplePack")` will install my solution to the package building exercise from earlier.
+
+## GitHub, CRAN, Bioconductor
+
+If you want to make your package available to more laymen users (i.e. who do not have `devtools` installed), then you need to publish it on an official R repository. there's really only 2 of these:
+
+* CRAN ([https://cran.r-project.org](https://cran.r-project.org))
+* Bioconductor ([https://bioconductor.org](bioconductor.org))
+
+These will subjet your package to some level of vetting and quality control, so it is a lot more work to get your package published here. We will not cover the details of this process here.
+
+
+## GitHub, CRAN, Bioconductor
+
+To publish your analysis for a peer reviewed publication, publishing on GitHub may be good enough for th journal. However it may be better to publish a specific release that captures the state of the package as it was when your paper was peer-reviewed. GitHub has such a release feature and you are encouraged to explore this.
+
+$$\,$$
+
+Alternatively you can also publish a release of your package using repositories such as [figshare](https://figshare.com) or [Zenodo](https://zenodo.org) and who usually allow you to create a release directly from the current GitHub repository.
+
+
+# Licenses 
+
+## Licenses
+
+$$\,$$
+
+Discuss:
+
+$$\,$$
+
+Why should you use a license to publish content or software?
+
+## Licenses
+
+### Why use licenses?
+
+A license is a legal document that will provide you and your institution some protection regarding how your content or software can be used and what attribution / credit needs to be given to your and your co-authors.
+
+While a license or a copyright license can obviously be used to restrict usage, you should still use one for open source documents to clarify wheher your work can be used for commercial purposes, how you should be given credit for your work, etc.
+
+For software, it is generally recommended to have a no-warranty / AS-IS statement in the license to protect you and your organisation from lawsuits from users of your software.
+
+### Software vs content
+
+You can use the same license for content and software but it is generally recommended to use content-specific licenses for content and software-specific licenses for computer code.
+
+
+## Licenses
+
+### Common open source software licenses:
+* MIT
+* GPL-3.0
+* See [https://opensource.org/licenses/alphabetical](https://opensource.org/licenses/alphabetical) for OSI approved licenses.
+* You can select one of several standard licenses on GitHub or upload your own.
+
+### Content licenses
+
+The most common here is the Creative Commons Attribution International license, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0). Wellcome funded research needs to be published using this license.
+
+### The Unlicense
+
+This is a public-domain quivalent license, without an attribution clause but with a no-warranty statement. See [http://unlicense.org](http://unlicense.org).
+
+
+##
+
+[end of Session 7]
