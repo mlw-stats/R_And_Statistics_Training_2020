@@ -302,7 +302,7 @@ The items marked by [*] are the minimum, bare-bones essentials.
 
 ## R packages
 
-To create a new R pckage, make use of RStudio's project feature:
+To create a new R package, make use of RStudio's project feature:
 
 $$\,$$
 
@@ -310,7 +310,7 @@ $$\,$$
 
 $$\,$$
 
-* If needed, create the files & directories from the previous slide either manually or using packages `devtools` (function `document()`) and `usethis` (when initiating a package). 
+* If needed, create the files & directories from the previous slide either manually or using packages `devtools` (function `document()`) and `usethis` (function `create_package()`, when initiating a package). 
 
 ## R packages - NAMESPACE & DESCRIPTION
 
@@ -398,6 +398,26 @@ Write the package in such a way that:
 * You have a function `doPlot()` which also takes at least one input argument (e.g. the output object of `doAnalysis()` or color of the regression line or a logical indicator whether or not to plot the individual data points as well) and which produces the graph that your markdown document produced.
 
 Use RStudio's 'Build' --> 'Clean and Rebuild' feature to test your package as you go along.
+
+
+## R packages
+
+$$\,$$
+
+**Exercise**
+
+Steps (except for the first and last two steps, the order is not important):
+
+1. Initiate a new package project.
+2. Edit the `DESCRIPTION` file.
+3. Add the data.
+4. Document the data.
+5. Write the R code.
+6. Document the R code.
+7. Write / edit `README.rd`.
+8. Build, test & debug.
+9. Publish.
+
 
 
 # GitHub, CRAN, Bioconductor
