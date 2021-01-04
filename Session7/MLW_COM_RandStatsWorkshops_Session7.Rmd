@@ -419,6 +419,18 @@ Steps (except for the first and last two steps, the order is not important):
 9. Publish.
 
 
+## R packages
+
+$$\,$$
+
+**Exercise - solution**
+
+$$\,$$
+
+To see an example of the package you were asked to build, go to:
+
+[https://github.com/gitMarcH/examplePack](https://github.com/gitMarcH/examplePack)
+
 
 # GitHub, CRAN, Bioconductor
 
